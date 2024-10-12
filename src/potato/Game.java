@@ -49,6 +49,10 @@ public class Game extends JFrame {
     public void update() {
         if (renderer.isGameStarted() && !renderer.isPaused()) {
             player.update(inputHandler, renderer.getMap());
+            for (Entity entity : Game.renderer.entities)
+            {
+                entity.update(gameLoop.getDeltaTime(), renderer.getMap(), player);
+            }
         }
     }
 

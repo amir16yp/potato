@@ -1,14 +1,17 @@
 package potato;
 
+import java.awt.image.BufferedImage;
 import java.util.Random;
 
 public class Map {
-    private int[][] map;
-    private final int width;
-    private final int height;
+    protected int[][] map;
+    protected final int width;
+    protected final int height;
     private final int minRoomSize = 5;
     private final int maxRoomSize = 15;
-    private final Random random;
+    protected final Random random;
+    protected BufferedImage floorImage = Game.textures.getTile(5);
+    protected BufferedImage ceilingImage = Game.textures.getTile(5);
 
     public Map(int width, int height, long seed) {
         this.width = width;
@@ -17,7 +20,7 @@ public class Map {
         generateMap();
     }
 
-    private void generateMap() {
+    protected void generateMap() {
         map = new int[height][width];
 
         // Fill the map with walls
@@ -63,7 +66,7 @@ public class Map {
                     // Check if it's a valid position for a door
                     if ((map[y][x-1] == 0 && map[y][x+1] == 0) ||
                             (map[y-1][x] == 0 && map[y+1][x] == 0)) {
-                        map[y][x] = 2; // Place a door
+                        map[y][x] = 0; // Place a door
                     }
                 }
             }
@@ -71,11 +74,20 @@ public class Map {
     }
 
     public boolean isWall(int x, int y) {
+        if (x < 0 || x >= width || y < 0 || y >= height) {
+            return true; // Treat out-of-bounds as walls
+        }
         return map[y][x] >= 1;
     }
 
-    public int getTextureId(int x, int y) {
-        return map[y][x];
+    public BufferedImage getTexture(int x, int y)
+    {
+        try {
+            return Game.textures.getTile(map[y][x]);
+        } catch (Exception e)
+        {
+            return OutdoorMap.createSkyGradient(32 ,32);
+        }
     }
 
     public int getWidth() {

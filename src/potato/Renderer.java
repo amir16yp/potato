@@ -1,24 +1,28 @@
 package potato;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Renderer {
     private static int HALF_HEIGHT;
-    private static final double FOV = Math.PI / 3;
-    private static final double HALF_FOV = FOV / 2;
+    public static final double FOV = Math.PI / 3;
+    public static final double HALF_FOV = FOV / 2;
     private static final double MAX_DISTANCE = 20.0;
     private double weaponBobOffset = 0;
     private static final double WEAPON_BOB_AMOUNT = 5.0; // Reduced from 10.0
     private static final double WEAPON_BOB_SPEED = 0.05; // Reduced from 0.1
+
 
     private final int width;
     private final int height;
     private final BufferStrategy bufferStrategy;
     private Map map = null;
     private final Player player;
+    public final CopyOnWriteArrayList<Entity> entities = new CopyOnWriteArrayList<>();
     private final Textures textures;
 
     public Map getMap() {
@@ -86,19 +90,22 @@ public class Renderer {
     private void renderGame(Graphics2D g2d, long fps) {
         if (map == null)
         {
-            try {
-                map = new Map(100, 100, Long.parseLong(this.getSeed()));
-            } catch (Exception e)
-            {
-                map = new Map(100, 100, this.getSeed().hashCode());
-            }
+            initializeMap();
         };
-        drawFloor(g2d);
+        drawCeilingAndFloor(g2d);
         castRays(g2d);
         renderWeapon(g2d);
         renderProjectiles(g2d);
+        renderEntities(g2d);
         drawFPS(g2d, fps);
     }
+
+    public void renderEntities(Graphics2D g) {
+        for (Entity entity : entities) {
+            entity.render(g, player, width, height);
+        }
+    }
+
 
     private void renderProjectiles(Graphics2D g2d) {
         CopyOnWriteArrayList<Projectile> projectiles = player.getProjectiles();
@@ -170,20 +177,30 @@ public class Renderer {
 
 
 
-    private void drawFloor(Graphics2D g2d) {
-        BufferedImage floorTexture = textures.getTile(5);
+
+    private void initializeMap() {
+        try {
+            map = new Map(100, 100, Long.parseLong(this.getSeed()));
+        } catch (NumberFormatException e) {
+            map = new Map(100, 100, this.getSeed().hashCode());
+        }
+    }
+
+    private void drawCeilingAndFloor(Graphics2D g2d) {
+        BufferedImage floorTexture = this.map.floorImage;
+        BufferedImage ceilingTexture = this.map.ceilingImage; // Assuming you have a ceiling texture
         int textureWidth = floorTexture.getWidth();
         int textureHeight = floorTexture.getHeight();
 
-        for (int y = HALF_HEIGHT; y < height; y++) {
-            double rayDirX0 = player.getX() - Math.tan(HALF_FOV);
-            double rayDirY0 = player.getY() + 1;
-            double rayDirX1 = player.getX() + Math.tan(HALF_FOV);
-            double rayDirY1 = player.getY() + 1;
+        double rayDirX0 = player.getX() - Math.tan(HALF_FOV);
+        double rayDirY0 = player.getY() + 1;
+        double rayDirX1 = player.getX() + Math.tan(HALF_FOV);
+        double rayDirY1 = player.getY() + 1;
 
-            int p = y - HALF_HEIGHT;
+        for (int y = 0; y < height; y++) {
+            double p = y - HALF_HEIGHT;
             double posZ = 0.5 * height;
-            double rowDistance = posZ / p;
+            double rowDistance = posZ / Math.abs(p);
 
             if (rowDistance > MAX_DISTANCE) continue;
 
@@ -200,7 +217,7 @@ public class Renderer {
                 floorX += floorStepX;
                 floorY += floorStepY;
 
-                int color = floorTexture.getRGB(tx, ty);
+                int color = (y < HALF_HEIGHT) ? ceilingTexture.getRGB(tx, ty) : floorTexture.getRGB(tx, ty);
                 g2d.setColor(new Color(color));
                 g2d.drawLine(x, y, x, y);
             }
@@ -224,12 +241,19 @@ public class Renderer {
                 int mapX = (int) x;
                 int mapY = (int) y;
 
+                // Check if the coordinates are within the map bounds
+                if (mapX < 0 || mapX >= map.getWidth() || mapY < 0 || mapY >= map.getHeight()) {
+                    break; // Stop casting this ray if it goes out of bounds
+                }
+
                 if (map.isWall(mapX, mapY)) {
                     distance *= Math.cos(player.getAngle() - angle);
                     int wallHeight = Math.min((int) (height / distance), height);
 
-                    int textureId = map.getTextureId(mapX, mapY);
-                    BufferedImage tileTexture = textures.getTile(textureId);
+                    BufferedImage tileTexture = map.getTexture(mapX, mapY);
+                    if (tileTexture == null) {
+                        break; // Skip this wall if the texture is null
+                    }
 
                     double wallX;
                     if (Math.abs(y - Math.floor(y)) < Math.abs(x - Math.floor(x))) {
@@ -237,11 +261,21 @@ public class Renderer {
                     } else {
                         wallX = x % 1;
                     }
-                    int textureX = (int)(wallX * textures.getTileWidth());
+                    int textureX = (int)(wallX * tileTexture.getWidth());
+                    textureX = Math.max(0, Math.min(textureX, tileTexture.getWidth() - 1));
 
                     for (int texY = 0; texY < wallHeight; texY++) {
-                        int textureY = texY * textures.getTileHeight() / wallHeight;
-                        int color = tileTexture.getRGB(textureX, textureY);
+                        int textureY = texY * tileTexture.getHeight() / wallHeight;
+                        textureY = Math.max(0, Math.min(textureY, tileTexture.getHeight() - 1));
+
+                        int color;
+                        try {
+                            color = tileTexture.getRGB(textureX, textureY);
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            // Use a default color if texture coordinates are invalid
+                            color = Color.MAGENTA.getRGB();
+                        }
+
                         g.setColor(new Color(color));
                         g.drawLine(ray, HALF_HEIGHT - wallHeight / 2 + texY, ray, HALF_HEIGHT - wallHeight / 2 + texY);
                     }

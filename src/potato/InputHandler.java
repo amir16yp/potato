@@ -1,10 +1,12 @@
 package potato;
 
+import javax.imageio.ImageIO;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class InputHandler extends KeyAdapter implements MouseListener {
+public class InputHandler extends KeyAdapter {
     private final Renderer renderer;
     private final Set<Integer> heldKeys = new HashSet<>();
     private boolean mouseLeftButtonHeld = false;
@@ -30,32 +32,6 @@ public class InputHandler extends KeyAdapter implements MouseListener {
     @Override
     public void keyReleased(KeyEvent e) {
         heldKeys.remove(e.getKeyCode());
-    }
-
-    @Override
-    public void mousePressed(MouseEvent e) {
-        if (e.getButton() == MouseEvent.BUTTON1) {
-            mouseLeftButtonHeld = true;
-        }
-    }
-
-    @Override
-    public void mouseReleased(MouseEvent e) {
-        if (e.getButton() == MouseEvent.BUTTON1) {
-            mouseLeftButtonHeld = false;
-        }
-    }
-
-    @Override
-    public void mouseClicked(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseEntered(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseExited(MouseEvent e) {
     }
 
     public boolean isKeyHeld(int keyCode) {
@@ -111,6 +87,14 @@ public class InputHandler extends KeyAdapter implements MouseListener {
     }
 
     private void handleGameInput(int key) {
+        if (key == KeyEvent.VK_X)
+        {
+            try {
+                renderer.entities.add(new Entity(Game.player.getX(), Game.player.getY(), ImageIO.read(this.getClass().getResourceAsStream("flag.png")), 0));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         if (key == KeyEvent.VK_ESCAPE || key == KeyEvent.VK_P) {
             renderer.pauseGame();
         }
