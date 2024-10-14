@@ -17,6 +17,8 @@ public class Game extends JFrame {
     public static Renderer renderer;
     public static Player player;
     public static Textures textures;
+    public static Textures hudTextures;
+    public static Textures projectileTextures;
     public static InputHandler inputHandler = new InputHandler();;
     public static GameLoop gameLoop;
     public static final ModLoader MOD_LOADER = new ModLoader();
@@ -35,7 +37,8 @@ public class Game extends JFrame {
 
         player = new Player(1.5, 1.5, 0); // Starting position and angle
         textures = new Textures("/potato/sprites/textures.png", 16, 16); // Load textures
-
+        hudTextures = new Textures("/potato/sprites/hud.png", 32,32);
+        projectileTextures = new Textures("/potato/sprites/gun/boolet.png", 32,32);
         canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
         add(canvas);
@@ -47,7 +50,7 @@ public class Game extends JFrame {
         canvas.createBufferStrategy(2);
         BufferStrategy bufferStrategy = canvas.getBufferStrategy();
 
-        renderer = new Renderer(WIDTH, HEIGHT, bufferStrategy, player, textures);
+        renderer = new Renderer(WIDTH, HEIGHT, bufferStrategy, player);
         addKeyListener(inputHandler);
         canvas.addKeyListener(inputHandler);
         gameLoop = new GameLoop(this);
@@ -59,8 +62,16 @@ public class Game extends JFrame {
 
     public void update() {
         player.update();
-        for (Entity entity : Game.renderer.entities) {
-            entity.update();
+        for (SpriteEntity spriteEntity : Game.renderer.entities) {
+            spriteEntity.update();
+        }
+        if (player.getWeapon() == null)
+        {
+            Renderer.GUN_NAME_TEXT.setText("Unarmed");
+            Renderer.GUN_AMMO_TEXT.setText("");
+        } else {
+            Renderer.GUN_NAME_TEXT.setText(player.getWeapon().getName());
+            Renderer.GUN_AMMO_TEXT.setText(String.valueOf(player.getWeapon().getAmmo()));
         }
         MOD_LOADER.updateMods();
     }

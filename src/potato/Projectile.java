@@ -13,17 +13,15 @@ public class Projectile {
     protected Logger logger = new Logger(this.getClass().getName());
     private double size;
 
-    private static final double COLLISION_THRESHOLD = 0.1;
-
-    public Projectile(double x, double y, double angle, double speed, int damage, BufferedImage sprite) {
+    public Projectile(double x, double y, double angle, double speed, int damage, int textureID) {
         this.x = x;
         this.y = y;
         this.angle = angle;
         this.speed = speed;
         this.damage = damage;
-        this.sprite = sprite;
+        this.sprite = Game.projectileTextures.getTile(textureID);
         this.active = true;
-        this.size = 0.2;
+        this.size = 0.1;
         logger.log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 
@@ -44,7 +42,7 @@ public class Projectile {
             deactivate("wall");
         }
 
-        for (Entity entity : Game.renderer.entities)
+        for (SpriteEntity spriteEntity : Game.renderer.entities)
         {
             // TODO: add entity collision
         }

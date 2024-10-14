@@ -2,16 +2,27 @@ package potato;
 
 import java.awt.image.BufferedImage;
 
-public class Entity {
+public class SpriteEntity {
     protected double x;
     protected double y;
     protected double angle;
     protected BufferedImage sprite;
     protected boolean active;
     protected double speed;
-    private double health = 100;
     private double size;
-    public Entity(double x, double y, BufferedImage sprite, double speed) {
+    private Runnable onInteractPlayer;
+
+    public void deactivate()
+    {
+        this.active = false;
+    }
+
+    public void setOnInteractPlayer(Runnable action)
+    {
+        this.onInteractPlayer = action;
+    }
+
+    public SpriteEntity(double x, double y, BufferedImage sprite, double speed) {
         this.x = x;
         this.y = y;
         this.angle = 0; // Initial angle, will be updated to face player
@@ -19,20 +30,7 @@ public class Entity {
         this.speed = speed;
         this.active = true;
         this.size = 1;
-    }
 
-    public double getHealth() {
-        return health;
-    }
-
-    public void takeDamage(double damage)
-    {
-        this.health -= damage;
-        if (this.health <= 0)
-        {
-            die();
-        }
-        //this.sprite = Renderer.adjustOpacity(this.sprite, (int) health);
     }
 
     public void render(Renderer renderer, Player player) {
@@ -68,24 +66,28 @@ public class Entity {
         renderer.drawSprite(sprite, screenX, screenY, (int) projectedSize, distance, Renderer.RenderTarget.GAME);
     }
 
-
-    public void die()
-    {
-        this.health = 0;
-        Game.renderer.entities.remove(this);
-    }
-
     public void update() {
-        if (!active) return;
+        if (!active) {
+            Game.renderer.entities.remove(this);
+            return;
+        };
         // Update angle to face the player
-        updateAngleToFacePlayer(Game.player);
-        // Override this method in subclasses to implement entity-specific behavior
+        updateToPlayer(Game.player);
     }
 
-    private void updateAngleToFacePlayer(Player player) {
+    private void updateToPlayer(Player player) {
         double dx = player.getX() - this.x;
         double dy = player.getY() - this.y;
         this.angle = Math.atan2(dy, dx);
+        if (this.onInteractPlayer == null)
+        {
+            return;
+        }
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 2)
+        {
+            onInteractPlayer.run();
+        }
     }
 
     private double normalizeAngle(double angle) {

@@ -8,6 +8,8 @@ import java.awt.image.BufferedImage;
 import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static potato.Game.textures;
+
 public class Renderer {
     private static int HALF_HEIGHT;
     public static final double FOV = Math.toRadians(120);
@@ -24,14 +26,15 @@ public class Renderer {
     private final BufferStrategy bufferStrategy;
     private Map map;
     private final Player player;
-    public final CopyOnWriteArrayList<Entity> entities = new CopyOnWriteArrayList<>();
-    private final Textures textures;
+    public final CopyOnWriteArrayList<SpriteEntity> entities = new CopyOnWriteArrayList<>();
     public static GlyphRenderer TextRenderer = new GlyphRenderer("/potato/sprites/ascii.png");
     private double[] zBuffer;
     private BufferedImage gameBuffer;
     private BufferedImage hudBuffer;
     private Graphics2D gameGraphics;
     private Graphics2D hudGraphics;
+    public static final GlyphText GUN_NAME_TEXT = new GlyphText("", 2);
+    public static final GlyphText GUN_AMMO_TEXT = new GlyphText("", 2);
 
     public double getGameHeight() {
         return gameHeight;
@@ -55,7 +58,7 @@ public class Renderer {
     }
 
 
-    public Renderer(int width, int height, BufferStrategy bufferStrategy, Player player, Textures textures) {
+    public Renderer(int width, int height, BufferStrategy bufferStrategy, Player player) {
         this.width = width;
         this.height = height;
         this.gameHeight = (int)(height * 0.8); // 80% of height for game view
@@ -63,7 +66,6 @@ public class Renderer {
         HALF_HEIGHT = gameHeight / 2;
         this.bufferStrategy = bufferStrategy;
         this.player = player;
-        this.textures = textures;
 
         this.zBuffer = new double[width];
         this.gameBuffer = new BufferedImage(width, gameHeight, BufferedImage.TYPE_INT_RGB);
@@ -92,11 +94,45 @@ public class Renderer {
         presentBuffers();
     }
 
-    private void renderHUD()
-    {
-        int count = player.getProjectiles().size();
-        new GlyphText("PROJECTILE COUNT " + String.valueOf(count), 2).setTextColor(Color.MAGENTA).draw(hudGraphics, 0, 0);
-        // Add more HUD elements here as needed
+
+    private void renderHUD() {
+        drawHealth();
+        drawWeaponIcon();
+    }
+
+    private void drawHealth() {
+        BufferedImage fullHeart = Game.hudTextures.getTile(1);
+        BufferedImage halfHeart = Game.hudTextures.getTile(2);
+        BufferedImage emptyHeart = Game.hudTextures.getTile(3);
+
+        double healthPercentage = player.getHealth();
+        int totalHearts = 10;
+        int fullHearts = (int) (healthPercentage / 10.0);
+        int halfHearts = (healthPercentage % 10.0 >= 5.0) ? 1 : 0;
+        int emptyHearts = totalHearts - fullHearts - halfHearts;
+
+        int heartWidth = fullHeart.getWidth();
+        int startX = 10;
+        int startY = 10;
+
+        for (int i = 0; i < fullHearts; i++) {
+            hudGraphics.drawImage(fullHeart, startX + i * heartWidth, startY, null);
+        }
+        if (halfHearts == 1) {
+            hudGraphics.drawImage(halfHeart, startX + fullHearts * heartWidth, startY, null);
+        }
+        for (int i = 0; i < emptyHearts; i++) {
+            hudGraphics.drawImage(emptyHeart, startX + (fullHearts + halfHearts + i) * heartWidth, startY, null);
+        }
+    }
+
+    private void drawWeaponIcon() {
+        BufferedImage weaponIcon = player.getWeapon().getGunSprite().getIconSprite();
+        int weaponIconX = 10;
+        int weaponIconY = 40; // Adjust based on health position
+        hudGraphics.drawImage(weaponIcon, weaponIconX, weaponIconY, null);
+        GUN_NAME_TEXT.draw(hudGraphics, weaponIconX + 40, weaponIconY);
+        GUN_AMMO_TEXT.draw(hudGraphics, weaponIconX + 40, weaponIconY + 15);
     }
 
     private void clearBuffers() {
@@ -152,22 +188,73 @@ public class Renderer {
 
 
     private void drawCeilingAndFloor() {
-        for (int y = 0; y < height; y++) {
+        Map map = getMap();
+        for (int y = 0; y < gameHeight; y++) {
             if (y < HALF_HEIGHT) {
-                drawHorizontalLine(y, Color.CYAN);
+                if (map.getCeilingImage() != null) {
+                    drawTextureRow(map.getCeilingImage(), y, 0); // Draw ceiling texture
+                } else {
+                    drawHorizontalLine(y, Color.BLACK); // Default color
+                }
             } else {
-                drawHorizontalLine(y, Color.DARK_GRAY);
+                if (map.getFloorImage() != null) {
+                    drawTextureRow(map.getFloorImage(), y, HALF_HEIGHT); // Draw floor texture
+                } else {
+                    drawHorizontalLine(y, Color.DARK_GRAY); // Default color
+                }
             }
         }
     }
 
+
+
     private void drawHorizontalLine(int y, Color color) {
         if (y < 0 || y >= gameHeight) return; // Avoid out-of-bounds errors
 
+        int rgb = color.getRGB();
         for (int x = 0; x < width; x++) {
-            gameBuffer.setRGB(x, y, color.getRGB());
+            gameBuffer.setRGB(x, y, rgb);
         }
     }
+
+
+    private void drawTextureRow(BufferedImage texture, int y, int offset) {
+        if (y < 0 || y >= gameHeight) return; // Avoid out-of-bounds errors
+
+        double planeZ = 0.5 * gameHeight;
+        double rowDistance = planeZ / (y - HALF_HEIGHT + 0.1); // Added small offset to avoid division by zero
+
+        double floorStepX = rowDistance * (player.getPlaneX() * 2) / width;
+        double floorStepY = rowDistance * (player.getPlaneY() * 2) / width;
+
+        double floorX = player.getX() + rowDistance * (player.getDirX() - player.getPlaneX());
+        double floorY = player.getY() + rowDistance * (player.getDirY() - player.getPlaneY());
+
+        for (int x = 0; x < width; x++) {
+            int tileX = Math.abs((int)(floorX * texture.getWidth()) % texture.getWidth());
+            int tileY = Math.abs((int)(floorY * texture.getHeight()) % texture.getHeight());
+
+            floorX += floorStepX;
+            floorY += floorStepY;
+
+            int color = texture.getRGB(tileX, tileY);
+            color = applyShading(color, rowDistance);
+            gameBuffer.setRGB(x, y, color);
+        }
+    }
+
+    /*
+    private int applyShading(int color, double distance) {
+        double shade = 1.0 / (1.0 + distance * distance * 0.1); // Quadratic attenuation
+        int r = (int) ((color >> 16 & 0xFF) * shade);
+        int g = (int) ((color >> 8 & 0xFF) * shade);
+        int b = (int) ((color & 0xFF) * shade);
+        return (r << 16) | (g << 8) | b;
+    }
+
+     */
+
+
     private void castRays() {
         double playerX = player.getX();
         double playerY = player.getY();
@@ -293,9 +380,9 @@ public class Renderer {
     }
 
     private void renderEntities() {
-        for (Entity entity : entities) {
+        for (SpriteEntity spriteEntity : entities) {
             {
-                entity.render(this, player);
+                spriteEntity.render(this, player);
             }
         }
     }

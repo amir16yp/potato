@@ -27,6 +27,10 @@ public class GlyphText {
     }
 
     public void draw(Graphics2D g, int x, int y) {
+        if (text.isEmpty())
+        {
+            return;
+        }
         if (backgroundColor != null) {
             g.setColor(backgroundColor);
             g.fillRect(x, y, getWidth(), getHeight());

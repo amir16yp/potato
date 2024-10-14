@@ -1,7 +1,7 @@
 package potato.input;
 
-import potato.Entity;
-import potato.Game;
+import potato.*;
+import sun.rmi.runtime.Log;
 
 import javax.imageio.ImageIO;
 import java.awt.event.KeyEvent;
@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static potato.Game.renderer;
+import static potato.Game.*;
 
 public class DefaultInputHandler implements IInputHandler {
     protected final Set<Integer> heldKeys = new HashSet<>();
@@ -67,11 +67,21 @@ public class DefaultInputHandler implements IInputHandler {
 
     protected void handleOtherInput(int key) {
         if (key == KeyEvent.VK_X) {
+            int[] coords = renderer.getMap().getRandomFreeCoordinate();
+            /*
             try {
-                renderer.entities.add(new Entity(Game.player.getX(), Game.player.getY(), ImageIO.read(this.getClass().getResourceAsStream("/potato/sprites/Mushie.png")), 0));
+                SpriteEntity ammoEntity = new SpriteEntity(coords[0], coords[1], ImageIO.read(this.getClass().getResourceAsStream("/potato/sprites/gun/pistol-ammo.png")), 0);
+                ammoEntity.setOnInteractPlayer(() -> {
+                    player.getWeapon().addAmmo(20);
+                    ammoEntity.deactivate();
+                });
+                renderer.entities.add(ammoEntity);
+                new Logger(this.getClass().getName()).log("Ammo Entity at " + coords[0] + "," + coords[1]);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+             */
+            Enemies.spawnEntity(coords[0], coords[1], Enemies.SHROOM_TEXTURES, 1.2);
         }
     }
 }

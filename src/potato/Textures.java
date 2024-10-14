@@ -17,6 +17,7 @@ public class Textures {
         this.tileHeight = tileHeight;
         this.tiles = new HashMap<>();
         this.logger = new Logger(this.getClass().getName());
+        this.logger.addPrefix(tilesetPath);
         loadTileset(tilesetPath);
     }
 

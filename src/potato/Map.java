@@ -14,7 +14,7 @@ public class Map {
     protected BufferedImage ceilingImage;
     protected final Logger logger;
 
-    public static final int[] wallTextureIDs = {13};
+    public static final int[] wallTextureIDs = {31};
 
     public Map(int width, int height, long seed) {
         this(width, height, seed, 5, 15);
@@ -27,6 +27,8 @@ public class Map {
         this.minRoomSize = minRoomSize;
         this.maxRoomSize = maxRoomSize;
         this.logger = new Logger(this.getClass().getName());
+        //this.ceilingImage = Game.textures.getTile(13);
+        this.floorImage = Game.textures.getTile(17);
         generateMap();
     }
 
@@ -57,6 +59,25 @@ public class Map {
             }
         }
     }
+
+    public int[] getRandomFreeCoordinate() {
+        int x, y;
+        int attempts = 0;
+        int maxAttempts = 100; // Limit to avoid infinite loops
+
+        do {
+            x = random.nextInt(width);
+            y = random.nextInt(height);
+            attempts++;
+            if (attempts > maxAttempts) {
+                logger.log("Max attempts reached while trying to find a free coordinate.");
+                return null; // Return null if no free space is found
+            }
+        } while (map[y][x] != 0); // Keep trying until a free space is found
+
+        return new int[]{x, y}; // Return the found coordinates
+    }
+
 
     private void generateRooms() {
         int numRooms = (width * height) / (maxRoomSize * maxRoomSize);

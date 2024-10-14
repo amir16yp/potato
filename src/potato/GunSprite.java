@@ -23,7 +23,11 @@ public class GunSprite {
     private int maxCycles;
     private int renderScale;
     private List<BufferedImage> scaledFrames;
-    public GunSprite(String spritesheetPath, int frameWidth, int frameHeight, float frameDuration, int renderScale) {
+    private BufferedImage iconSprite;
+    protected Logger logger;
+
+    public GunSprite(String spritesheetPath, String iconSpritePath, int frameWidth, int frameHeight, float frameDuration, int renderScale) {
+        this.logger = new Logger(this.getClass().getName());
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
         this.frameDuration = frameDuration;
@@ -44,7 +48,13 @@ public class GunSprite {
             this.framesCount = calculateFrameCount();
             this.frames = new ArrayList<>(framesCount);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e);
+        }
+        try {
+            this.iconSprite = ImageIO.read(this.getClass().getResourceAsStream(iconSpritePath));
+        } catch (IOException e)
+        {
+            logger.error(e);
         }
     }
 
@@ -185,5 +195,9 @@ public class GunSprite {
 
     public int getMaxCycles() {
         return maxCycles;
+    }
+
+    public BufferedImage getIconSprite() {
+        return iconSprite;
     }
 }

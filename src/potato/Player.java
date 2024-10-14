@@ -18,15 +18,17 @@ public class Player {
     // Constants for collision detection
     private static final double COLLISION_RADIUS = 0.2;
 
-    public double getHeartCount()
-    {
-        return health / 10;
-    }
-
     public double getHealth() {
         return health;
     }
 
+    public double getDirX() {
+        return Math.cos(angle);
+    }
+
+    public double getDirY() {
+        return Math.sin(angle);
+    }
 
 
     public Player(double x, double y, double angle) {
@@ -128,7 +130,7 @@ public class Player {
                 // Adjust the initial position to be slightly in front of the player
                 double projectileX = x + Math.cos(angle) * 0.5;
                 double projectileY = y + Math.sin(angle) * 0.5;
-                Projectile projectile = weapon.fire(projectileX, projectileY, angle);
+                Projectile projectile = weapon.fire(projectileX, projectileY, angle, this.weapon.getProjectileTextureID());
                 projectiles.add(projectile);
             }
         }
