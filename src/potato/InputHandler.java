@@ -20,13 +20,7 @@ public class InputHandler extends KeyAdapter {
         int key = e.getKeyCode();
         heldKeys.add(key);
 
-        if (!renderer.isGameStarted()) {
-            handleMenuInput(key);
-        } else if (renderer.isPaused()) {
-            handlePausedInput(key);
-        } else {
-            handleGameInput(key);
-        }
+        handleGameInput(key);
     }
 
     @Override
@@ -66,26 +60,6 @@ public class InputHandler extends KeyAdapter {
         return isKeyHeld(KeyEvent.VK_SPACE);
     }
 
-    private void handleMenuInput(int key) {
-        if (!renderer.isSeedEntered()) {
-            if (Character.isDigit(key)) {
-                renderer.addToSeed((char) key);
-            } else if (key == KeyEvent.VK_BACK_SPACE) {
-                renderer.backspaceSeed();
-            } else if (key == KeyEvent.VK_ENTER) {
-                renderer.confirmSeed();
-            }
-        } else if (key == KeyEvent.VK_ENTER) {
-            renderer.startGame();
-        }
-    }
-
-    private void handlePausedInput(int key) {
-        if (key == KeyEvent.VK_P) {
-            renderer.resumeGame();
-        }
-    }
-
     private void handleGameInput(int key) {
         if (key == KeyEvent.VK_X)
         {
@@ -94,9 +68,6 @@ public class InputHandler extends KeyAdapter {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }
-        if (key == KeyEvent.VK_ESCAPE || key == KeyEvent.VK_P) {
-            renderer.pauseGame();
         }
     }
 }

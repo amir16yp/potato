@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Renderer {
@@ -13,9 +14,8 @@ public class Renderer {
     public static final double HALF_FOV = FOV / 2;
     private static final double MAX_DISTANCE = 20.0;
     private double weaponBobOffset = 0;
-    private static final double WEAPON_BOB_AMOUNT = 5.0; // Reduced from 10.0
-    private static final double WEAPON_BOB_SPEED = 0.05; // Reduced from 0.1
-
+    private static final double WEAPON_BOB_AMOUNT = 5.0;
+    private static final double WEAPON_BOB_SPEED = 0.05;
 
     private final int width;
     private final int height;
@@ -25,14 +25,9 @@ public class Renderer {
     public final CopyOnWriteArrayList<Entity> entities = new CopyOnWriteArrayList<>();
     private final Textures textures;
 
-    public Map getMap() {
-        return map;
-    }
-
-    private boolean isGameStarted = false;
-    private boolean isPaused = false;
-    private StringBuilder seedInput = new StringBuilder();
-    private boolean isSeedEntered = false;
+    private double[] zBuffer;
+    private BufferedImage offScreenBuffer;
+    private Graphics2D offScreenGraphics;
 
     public Renderer(int width, int height, BufferStrategy bufferStrategy, Player player, Textures textures) {
         this.width = width;
@@ -41,190 +36,58 @@ public class Renderer {
         this.bufferStrategy = bufferStrategy;
         this.player = player;
         this.textures = textures;
+
+        this.zBuffer = new double[width];
+        this.offScreenBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        this.offScreenGraphics = offScreenBuffer.createGraphics();
     }
 
     public void render(long fps) {
+        offScreenGraphics.setColor(Color.BLACK);
+        offScreenGraphics.fillRect(0, 0, width, height);
+
+        renderGame(offScreenGraphics, fps);
+
         Graphics2D g2d = (Graphics2D) bufferStrategy.getDrawGraphics();
-        g2d.setColor(Color.BLACK);
-        g2d.fillRect(0, 0, width, height);
-
-        if (!isGameStarted || isPaused) {
-            renderMenu(g2d);
-        } else {
-            renderGame(g2d, fps);
-        }
-
+        g2d.drawImage(offScreenBuffer, 0, 0, null);
         g2d.dispose();
         bufferStrategy.show();
     }
 
-    private void renderMenu(Graphics2D g2d) {
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 32));
-
-        String mainText = isGameStarted ? "PAUSED" : "RAYCASTER GAME";
-        int mainTextWidth = g2d.getFontMetrics().stringWidth(mainText);
-        g2d.drawString(mainText, (width - mainTextWidth) / 2, height / 3);
-
-        g2d.setFont(new Font("Arial", Font.PLAIN, 24));
-
-        if (!isGameStarted && !isSeedEntered) {
-            String seedPrompt = "Enter seed (numbers only):";
-            int seedPromptWidth = g2d.getFontMetrics().stringWidth(seedPrompt);
-            g2d.drawString(seedPrompt, (width - seedPromptWidth) / 2, height / 2 - 30);
-
-            String seedText = seedInput.toString();
-            int seedTextWidth = g2d.getFontMetrics().stringWidth(seedText);
-            g2d.drawString(seedText, (width - seedTextWidth) / 2, height / 2 + 10);
-
-            String seedInstruction = "Press ENTER to confirm seed";
-            int seedInstructionWidth = g2d.getFontMetrics().stringWidth(seedInstruction);
-            g2d.drawString(seedInstruction, (width - seedInstructionWidth) / 2, height / 2 + 50);
-        } else {
-            String instructionText = isGameStarted ? "Press P to resume" : "Press ENTER to start";
-            int instructionTextWidth = g2d.getFontMetrics().stringWidth(instructionText);
-            g2d.drawString(instructionText, (width - instructionTextWidth) / 2, height / 2);
-        }
-    }
-
     private void renderGame(Graphics2D g2d, long fps) {
-        if (map == null)
-        {
+        if (map == null) {
             initializeMap();
-        };
+        }
+
+        for (int i = 0; i < width; i++) {
+            zBuffer[i] = Double.MAX_VALUE;
+        }
+
         drawCeilingAndFloor(g2d);
         castRays(g2d);
-        renderWeapon(g2d);
-        renderProjectiles(g2d);
         renderEntities(g2d);
+        renderProjectiles(g2d);
+        renderWeapon(g2d);
         drawFPS(g2d, fps);
     }
 
-    public void renderEntities(Graphics2D g) {
-        for (Entity entity : entities) {
-            entity.render(g, player, width, height);
-        }
-    }
-
-
-    private void renderProjectiles(Graphics2D g2d) {
-        CopyOnWriteArrayList<Projectile> projectiles = player.getProjectiles();
-        for (Projectile projectile : projectiles) {
-            // Calculate projectile position relative to player
-            double relativeX = projectile.getX() - player.getX();
-            double relativeY = projectile.getY() - player.getY();
-
-            // Calculate angle and distance to projectile
-            double angle = Math.atan2(relativeY, relativeX) - player.getAngle();
-            double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-
-            // Only render if in field of view             // Adjust for fish-eye effect
-            distance *= Math.cos(angle);
-            int screenX = (int) ((angle + HALF_FOV) / FOV * width);
-            int screenY = height / 2;
-
-            // Get the projectile sprite
-            BufferedImage projectileSprite = projectile.getSprite();
-
-            // Calculate size based on distance (you may need to adjust this scaling factor)
-            double scaleFactor = 1.0 / distance;
-            int spriteWidth = (int) (projectileSprite.getWidth() * scaleFactor);
-            int spriteHeight = (int) (projectileSprite.getHeight() * scaleFactor);
-
-            // Center the sprite on its position
-            int drawX = screenX - spriteWidth / 2;
-            int drawY = screenY - spriteHeight / 2;
-
-            // Draw the sprite
-            g2d.drawImage(projectileSprite, drawX, drawY, spriteWidth, spriteHeight, null);
-        }
-    }
-
-    private void renderWeapon(Graphics2D g2d) {
-        if (player.getWeapon() == null) {
-            return;
-        }
-        BufferedImage weaponTexture = player.getWeapon().getGunSprite().getCurrentFrame();
-        int weaponWidth = weaponTexture.getWidth() * 3;
-        int weaponHeight = weaponTexture.getHeight() * 3;
-
-        // Position the weapon at the bottom center of the screen
-        int x = (width - weaponWidth) / 2;
-        int y = height - weaponHeight;
-
-        // Calculate bobbing effect based on player movement
-        if (player.isMoving()) {
-            weaponBobOffset += WEAPON_BOB_SPEED;
-            if (weaponBobOffset > Math.PI * 2) {
-                weaponBobOffset -= Math.PI * 2;
-            }
-        } else {
-            // Gradually return to center when not moving
-            weaponBobOffset *= 0.8;
-        }
-
-        double bobY = Math.sin(weaponBobOffset) * WEAPON_BOB_AMOUNT;
-        double bobX = Math.cos(weaponBobOffset * 0.5) * WEAPON_BOB_AMOUNT * 0.5;
-
-        g2d.drawImage(weaponTexture,
-                (int)(x + bobX),
-                (int)(y + bobY),
-                weaponWidth,
-                weaponHeight,
-                null);
-    }
-
-
-
-
-
     private void initializeMap() {
-        try {
-            map = new Map(100, 100, Long.parseLong(this.getSeed()));
-        } catch (NumberFormatException e) {
-            map = new Map(100, 100, this.getSeed().hashCode());
-        }
+        // Initialize the map with a default size or load from a file
+        map = new Map(100, 100, new Random().nextLong()); // Adjust size as needed
     }
 
     private void drawCeilingAndFloor(Graphics2D g2d) {
-        BufferedImage floorTexture = this.map.floorImage;
-        BufferedImage ceilingTexture = this.map.ceilingImage; // Assuming you have a ceiling texture
-        int textureWidth = floorTexture.getWidth();
-        int textureHeight = floorTexture.getHeight();
-
-        double rayDirX0 = player.getX() - Math.tan(HALF_FOV);
-        double rayDirY0 = player.getY() + 1;
-        double rayDirX1 = player.getX() + Math.tan(HALF_FOV);
-        double rayDirY1 = player.getY() + 1;
-
         for (int y = 0; y < height; y++) {
-            double p = y - HALF_HEIGHT;
-            double posZ = 0.5 * height;
-            double rowDistance = posZ / Math.abs(p);
-
-            if (rowDistance > MAX_DISTANCE) continue;
-
-            double floorStepX = rowDistance * (rayDirX1 - rayDirX0) / width;
-            double floorStepY = rowDistance * (rayDirY1 - rayDirY0) / width;
-
-            double floorX = player.getX() + rowDistance * rayDirX0;
-            double floorY = player.getY() + rowDistance * rayDirY0;
-
-            for (int x = 0; x < width; ++x) {
-                int tx = (int)(textureWidth * (floorX - Math.floor(floorX))) & (textureWidth - 1);
-                int ty = (int)(textureHeight * (floorY - Math.floor(floorY))) & (textureHeight - 1);
-
-                floorX += floorStepX;
-                floorY += floorStepY;
-
-                int color = (y < HALF_HEIGHT) ? ceilingTexture.getRGB(tx, ty) : floorTexture.getRGB(tx, ty);
-                g2d.setColor(new Color(color));
-                g2d.drawLine(x, y, x, y);
+            if (y < HALF_HEIGHT) {
+                g2d.setColor(new Color(100, 100, 200)); // Sky color
+            } else {
+                g2d.setColor(new Color(50, 50, 50)); // Floor color
             }
+            g2d.drawLine(0, y, width, y);
         }
     }
 
-    private void castRays(Graphics g) {
+    private void castRays(Graphics2D g) {
         double startAngle = player.getAngle() - HALF_FOV;
         for (int ray = 0; ray < width; ray++) {
             double angle = startAngle + (ray / (double) width) * FOV;
@@ -241,9 +104,8 @@ public class Renderer {
                 int mapX = (int) x;
                 int mapY = (int) y;
 
-                // Check if the coordinates are within the map bounds
                 if (mapX < 0 || mapX >= map.getWidth() || mapY < 0 || mapY >= map.getHeight()) {
-                    break; // Stop casting this ray if it goes out of bounds
+                    break;
                 }
 
                 if (map.isWall(mapX, mapY)) {
@@ -252,32 +114,16 @@ public class Renderer {
 
                     BufferedImage tileTexture = map.getTexture(mapX, mapY);
                     if (tileTexture == null) {
-                        break; // Skip this wall if the texture is null
+                        break;
                     }
 
-                    double wallX;
-                    if (Math.abs(y - Math.floor(y)) < Math.abs(x - Math.floor(x))) {
-                        wallX = y % 1;
-                    } else {
-                        wallX = x % 1;
-                    }
+                    double wallX = (Math.abs(y - Math.floor(y)) < Math.abs(x - Math.floor(x))) ? y % 1 : x % 1;
                     int textureX = (int)(wallX * tileTexture.getWidth());
                     textureX = Math.max(0, Math.min(textureX, tileTexture.getWidth() - 1));
 
-                    for (int texY = 0; texY < wallHeight; texY++) {
-                        int textureY = texY * tileTexture.getHeight() / wallHeight;
-                        textureY = Math.max(0, Math.min(textureY, tileTexture.getHeight() - 1));
-
-                        int color;
-                        try {
-                            color = tileTexture.getRGB(textureX, textureY);
-                        } catch (ArrayIndexOutOfBoundsException e) {
-                            // Use a default color if texture coordinates are invalid
-                            color = Color.MAGENTA.getRGB();
-                        }
-
-                        g.setColor(new Color(color));
-                        g.drawLine(ray, HALF_HEIGHT - wallHeight / 2 + texY, ray, HALF_HEIGHT - wallHeight / 2 + texY);
+                    if (distance < zBuffer[ray]) {
+                        zBuffer[ray] = distance;
+                        drawWallSlice(g, ray, wallHeight, tileTexture, textureX, distance);
                     }
                     break;
                 }
@@ -285,59 +131,133 @@ public class Renderer {
         }
     }
 
+    private void drawWallSlice(Graphics2D g, int ray, int wallHeight, BufferedImage texture, int textureX, double distance) {
+        int startY = HALF_HEIGHT - wallHeight / 2;
+        int endY = startY + wallHeight;
+
+        for (int y = startY; y < endY; y++) {
+            int textureY = (int) ((y - startY) * texture.getHeight() / wallHeight);
+            textureY = Math.max(0, Math.min(textureY, texture.getHeight() - 1));
+
+            int color;
+            try {
+                color = texture.getRGB(textureX, textureY);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                color = Color.MAGENTA.getRGB();
+            }
+
+            color = applyShading(color, distance);
+            offScreenBuffer.setRGB(ray, y, color);
+        }
+    }
+
+    private int applyShading(int color, double distance) {
+        double shade = 1.0 - Math.min(distance / MAX_DISTANCE, 1.0);
+        int r = (int) ((color >> 16 & 0xFF) * shade);
+        int g = (int) ((color >> 8 & 0xFF) * shade);
+        int b = (int) ((color & 0xFF) * shade);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    private void renderEntities(Graphics2D g) {
+        for (Entity entity : entities) {
+            double relativeX = entity.getX() - player.getX();
+            double relativeY = entity.getY() - player.getY();
+            double angle = Math.atan2(relativeY, relativeX) - player.getAngle();
+            double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+
+            if (Math.abs(angle) < HALF_FOV) {
+                int screenX = (int) ((angle + HALF_FOV) / FOV * width);
+                int screenY = height / 2;
+                int spriteSize = (int) (height / distance);
+
+                BufferedImage sprite = entity.getSprite();
+                drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
+            }
+        }
+    }
+
+    private void drawSprite(Graphics2D g, BufferedImage sprite, int screenX, int screenY, int spriteSize, double distance) {
+        int halfSize = spriteSize / 2;
+        int startX = screenX - halfSize;
+        int endX = screenX + halfSize;
+        int startY = screenY - halfSize;
+        int endY = screenY + halfSize;
+
+        for (int x = startX; x < endX; x++) {
+            if (x < 0 || x >= width) continue;
+            if (distance >= zBuffer[x]) continue;
+
+            int texX = (x - startX) * sprite.getWidth() / spriteSize;
+            for (int y = startY; y < endY; y++) {
+                if (y < 0 || y >= height) continue;
+
+                int texY = (y - startY) * sprite.getHeight() / spriteSize;
+                int color = sprite.getRGB(texX, texY);
+
+                if ((color & 0xFF000000) != 0) {
+                    color = applyShading(color, distance);
+                    offScreenBuffer.setRGB(x, y, color);
+                }
+            }
+        }
+    }
+
+    private void renderProjectiles(Graphics2D g) {
+        for (Projectile projectile : player.getProjectiles()) {
+            double relativeX = projectile.getX() - player.getX();
+            double relativeY = projectile.getY() - player.getY();
+            double angle = Math.atan2(relativeY, relativeX) - player.getAngle();
+            double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+
+            if (Math.abs(angle) < HALF_FOV) {
+                int screenX = (int) ((angle + HALF_FOV) / FOV * width);
+                int screenY = height / 2;
+                int spriteSize = (int) (height / distance);
+
+                BufferedImage sprite = projectile.getSprite();
+                drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
+            }
+        }
+    }
+
+    private void renderWeapon(Graphics2D g) {
+        if (player.getWeapon() == null) {
+            return;
+        }
+        BufferedImage weaponTexture = player.getWeapon().getGunSprite().getCurrentFrame();
+        int weaponWidth = weaponTexture.getWidth() * 3;
+        int weaponHeight = weaponTexture.getHeight() * 3;
+
+        int x = (width - weaponWidth) / 2;
+        int y = height - weaponHeight;
+
+        if (player.isMoving()) {
+            weaponBobOffset += WEAPON_BOB_SPEED;
+            if (weaponBobOffset > Math.PI * 2) {
+                weaponBobOffset -= Math.PI * 2;
+            }
+        } else {
+            weaponBobOffset *= 0.8;
+        }
+
+        double bobY = Math.sin(weaponBobOffset) * WEAPON_BOB_AMOUNT;
+        double bobX = Math.cos(weaponBobOffset * 0.5) * WEAPON_BOB_AMOUNT * 0.5;
+
+        g.drawImage(weaponTexture,
+                (int)(x + bobX),
+                (int)(y + bobY),
+                weaponWidth,
+                weaponHeight,
+                null);
+    }
+
     private void drawFPS(Graphics g, long fps) {
         g.setColor(Color.WHITE);
         g.drawString("FPS: " + fps, 10, 20);
     }
 
-    public void startGame() {
-        if (isSeedEntered) {
-            isGameStarted = true;
-            isPaused = false;
-            long seed = Long.parseLong(seedInput.toString());
-            // Example: map.generateMap(seed);
-        }
-    }
-
-    public void pauseGame() {
-        isPaused = true;
-    }
-
-    public void resumeGame() {
-        isPaused = false;
-    }
-
-    public boolean isGameStarted() {
-        return isGameStarted;
-    }
-
-    public boolean isPaused() {
-        return isPaused;
-    }
-
-    public void addToSeed(char c) {
-        if (!isSeedEntered && Character.isDigit(c) && seedInput.length() < 10) {
-            seedInput.append(c);
-        }
-    }
-
-    public void backspaceSeed() {
-        if (!isSeedEntered && seedInput.length() > 0) {
-            seedInput.setLength(seedInput.length() - 1);
-        }
-    }
-
-    public void confirmSeed() {
-        if (!isSeedEntered && seedInput.length() > 0) {
-            isSeedEntered = true;
-        }
-    }
-
-    public boolean isSeedEntered() {
-        return isSeedEntered;
-    }
-
-    public String getSeed() {
-        return seedInput.toString();
+    public Map getMap() {
+        return map;
     }
 }
