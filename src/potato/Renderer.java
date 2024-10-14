@@ -17,30 +17,33 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static potato.Game.textures;
 
 public class Renderer {
-    private static int HALF_HEIGHT;
     public static final double FOV = Math.toRadians(60);
     public static final double HALF_FOV = FOV / 2;
     public static final double MAX_DISTANCE = 20.0;
+    public static final GlyphRenderer TextRenderer = new GlyphRenderer("/potato/sprites/ascii.png");
+    public static final GlyphText GUN_NAME_TEXT = new GlyphText("", 2);
+    public static final GlyphText GUN_AMMO_TEXT = new GlyphText("", 2);
+    public static final GlyphText FPS_TEXT = new GlyphText("", 2).setTextColor(Color.YELLOW).setBackgroundColor(Color.DARK_GRAY);
     private static final double WALL_HEIGHT = 1.0;
     private static final double EPSILON = 1e-4;
     private static final double WEAPON_BOB_SPEED = 4.0;
     private static final double WEAPON_BOB_AMOUNT = 10.0;
+    private static int HALF_HEIGHT;
+    public final CopyOnWriteArrayList<SpriteEntity> entities = new CopyOnWriteArrayList<>();
+    private final Player player;
     public int width;
-    private int height;
     public int gameHeight;
+    private int height;
     private int hudHeight;
     private Map map;
-    private final Player player;
-    public final CopyOnWriteArrayList<SpriteEntity> entities = new CopyOnWriteArrayList<>();
-    public static GlyphRenderer TextRenderer = new GlyphRenderer("/potato/sprites/ascii.png");
     private double[] zBuffer;
-    public static final GlyphText GUN_NAME_TEXT = new GlyphText("", 2);
-    public static final GlyphText GUN_AMMO_TEXT = new GlyphText("", 2);
     private SunGraphics2D fastGraphics;
     private SurfaceData surfaceData;
     private BufferedImage buffer;
     private int[] pixels;
-    private Component canvas;
+    private final Component canvas;
+
+
     public Renderer(int width, int height, Component canvas, Player player) {
         this.width = width;
         this.height = height;
@@ -133,7 +136,7 @@ public class Renderer {
         drawWeaponIcon(g);
 
         // Draw FPS
-        drawFPS(g, Game.gameLoop.getFPS());
+        drawFPS(g);
 
         g.dispose();
     }
@@ -178,11 +181,10 @@ public class Renderer {
         GUN_AMMO_TEXT.draw(g, weaponIconX + 40, weaponIconY + 15);
     }
 
-    private void drawFPS(Graphics2D g, long fps) {
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 14));
-        g.drawString("FPS: " + fps, 10, height - 10);
+    private void drawFPS(Graphics2D g) {
+        FPS_TEXT.draw(g, width - FPS_TEXT.getWidth(), gameHeight + 40);
     }
+
     private void drawCeilingAndFloor() {
         Map map = getMap();
         for (int y = 0; y < gameHeight; y++) {
@@ -339,6 +341,7 @@ public class Renderer {
             pixels[y * width + x] = color;
         }
     }
+
     private int applyShading(int color, double distance) {
         double shade = 1.0 - Math.min(distance / MAX_DISTANCE, 1.0);
         int r = (int) ((color >> 16 & 0xFF) * shade);
@@ -407,7 +410,7 @@ public class Renderer {
         double weaponBobOffset = Math.sin(System.currentTimeMillis() / 1000.0 * WEAPON_BOB_SPEED) * WEAPON_BOB_AMOUNT * playerSpeed;
 
         int weaponX = (width - weaponFrame.getWidth()) / 2;
-        int weaponY = gameHeight - weaponFrame.getHeight() + (int)weaponBobOffset;
+        int weaponY = gameHeight - weaponFrame.getHeight() + (int) weaponBobOffset;
 
         Graphics2D g = buffer.createGraphics();
         g.drawImage(weaponFrame, weaponX, weaponY, null);
@@ -425,7 +428,7 @@ public class Renderer {
     public void setDimensions(int width, int height) {
         this.width = width;
         this.height = height;
-        this.gameHeight = (int)(height * 0.8);
+        this.gameHeight = (int) (height * 0.8);
         this.hudHeight = height - gameHeight;
         HALF_HEIGHT = gameHeight / 2;
 

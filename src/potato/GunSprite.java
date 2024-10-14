@@ -8,15 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GunSprite {
+    protected Logger logger;
     private BufferedImage spritesheet;
     private List<BufferedImage> frames;
     private int currentFrame;
-    private int frameWidth;
-    private int frameHeight;
+    private final int frameWidth;
+    private final int frameHeight;
     private int framesCount;
     private boolean isFiring;
     private float frameTimer;
-    private float frameDuration;
+    private final float frameDuration;
     private float firingTimer;
     private float firingDuration;
     private int cycleCount;
@@ -24,7 +25,6 @@ public class GunSprite {
     private int renderScale;
     private List<BufferedImage> scaledFrames;
     private BufferedImage iconSprite;
-    protected Logger logger;
 
     public GunSprite(String spritesheetPath, String iconSpritePath, int frameWidth, int frameHeight, float frameDuration, int renderScale) {
         this.logger = new Logger(this.getClass().getName());
@@ -39,8 +39,7 @@ public class GunSprite {
         this.cycleCount = 0;
         this.maxCycles = 1; // Default to 1 cycle
         this.renderScale = renderScale;
-        if (renderScale >= 2)
-        {
+        if (renderScale >= 2) {
             this.scaledFrames = new ArrayList<>(framesCount);
         }
         try {
@@ -52,8 +51,7 @@ public class GunSprite {
         }
         try {
             this.iconSprite = ImageIO.read(this.getClass().getResourceAsStream(iconSpritePath));
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             logger.error(e);
         }
     }
@@ -64,8 +62,7 @@ public class GunSprite {
 
     public void setRenderScale(int renderScale) {
         this.renderScale = renderScale;
-        if (renderScale >= 2)
-        {
+        if (renderScale >= 2) {
             scaledFrames.clear();
             for (BufferedImage frame : frames) {
                 scaledFrames.add(createScaledImage(frame));
@@ -93,8 +90,7 @@ public class GunSprite {
         );
         frames.add(frame);
 
-        if (this.getRenderScale() >= 2)
-        {
+        if (this.getRenderScale() >= 2) {
             BufferedImage scaledFrame = createScaledImage(frame);
             scaledFrames.add(scaledFrame);
         }
@@ -172,8 +168,7 @@ public class GunSprite {
 
     public BufferedImage getCurrentFrame() {
         loadFrame(currentFrame);
-        if (this.getRenderScale() >= 2)
-        {
+        if (this.getRenderScale() >= 2) {
             return scaledFrames.get(currentFrame);
         } else {
             return frames.get(currentFrame);
@@ -189,12 +184,12 @@ public class GunSprite {
         return isFiring;
     }
 
-    public void setMaxCycles(int maxCycles) {
-        this.maxCycles = maxCycles;
-    }
-
     public int getMaxCycles() {
         return maxCycles;
+    }
+
+    public void setMaxCycles(int maxCycles) {
+        this.maxCycles = maxCycles;
     }
 
     public BufferedImage getIconSprite() {

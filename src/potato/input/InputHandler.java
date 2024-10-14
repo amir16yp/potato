@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class InputHandler extends KeyAdapter {
-    private IInputHandler activeHandler;
     private final List<InputHandlerExtension> extensions = new ArrayList<>();
+    private IInputHandler activeHandler;
 
     public InputHandler() {
         this.activeHandler = new DefaultInputHandler();
@@ -37,17 +37,38 @@ public class InputHandler extends KeyAdapter {
         }
     }
 
-    public boolean isMovingForward() { return activeHandler.isMovingForward(); }
-    public boolean isMovingBackward() { return activeHandler.isMovingBackward(); }
-    public boolean isStrafingLeft() { return activeHandler.isStrafingLeft(); }
-    public boolean isStrafingRight() { return activeHandler.isStrafingRight(); }
-    public boolean isRotatingLeft() { return activeHandler.isRotatingLeft(); }
-    public boolean isRotatingRight() { return activeHandler.isRotatingRight(); }
-    public boolean isFiring() { return activeHandler.isFiring(); }
+    public boolean isMovingForward() {
+        return activeHandler.isMovingForward();
+    }
+
+    public boolean isMovingBackward() {
+        return activeHandler.isMovingBackward();
+    }
+
+    public boolean isStrafingLeft() {
+        return activeHandler.isStrafingLeft();
+    }
+
+    public boolean isStrafingRight() {
+        return activeHandler.isStrafingRight();
+    }
+
+    public boolean isRotatingLeft() {
+        return activeHandler.isRotatingLeft();
+    }
+
+    public boolean isRotatingRight() {
+        return activeHandler.isRotatingRight();
+    }
+
+    public boolean isFiring() {
+        return activeHandler.isFiring();
+    }
 
     // Interface for InputHandler extensions
     public interface InputHandlerExtension {
         void onKeyPressed(int keyCode);
+
         void onKeyReleased(int keyCode);
     }
 }

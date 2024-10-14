@@ -1,16 +1,15 @@
 package potato;
 
 public class Weapon {
-    private String name;
+    protected Logger logger = new Logger(this.getClass().getName());
+    private final String name;
     private int damage;
     private float cooldownTime; // Time between shots in seconds
     private float projectileSpeed;
     private int projectileTextureID;
     private float currentCooldown; // Current time until next shot
-    private GunSprite gunSprite;
+    private final GunSprite gunSprite;
     private int ammo = 100;
-
-    protected Logger logger = new Logger(this.getClass().getName());
 
     public Weapon(String name, int damage, float cooldownTime, float projectileSpeed, GunSprite gunSprite, int projectileTextureID) {
         this.name = name;
@@ -31,8 +30,7 @@ public class Weapon {
         this.ammo = ammo;
     }
 
-    public void addAmmo(int ammo)
-    {
+    public void addAmmo(int ammo) {
         this.ammo += ammo;
     }
 
@@ -54,8 +52,7 @@ public class Weapon {
             currentCooldown = cooldownTime;
             this.gunSprite.triggerFire(cooldownTime * 1000); // Convert to milliseconds
             ammo--;
-            if (ammo <= 0)
-            {
+            if (ammo <= 0) {
                 ammo = 0;
             }
             return new Projectile(x, y, angle, projectileSpeed, damage, textureID);
@@ -83,12 +80,12 @@ public class Weapon {
         return projectileSpeed;
     }
 
-    public GunSprite getGunSprite() {
-        return gunSprite;
-    }
-
     public void setProjectileSpeed(float projectileSpeed) {
         this.projectileSpeed = projectileSpeed;
+    }
+
+    public GunSprite getGunSprite() {
+        return gunSprite;
     }
 
     public int getProjectileTextureID() {

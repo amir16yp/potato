@@ -1,16 +1,11 @@
 package potato;
 
-import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 
 public class EnemyEntity extends SpriteEntity {
-    // Animation states
-    public enum State {
-        IDLE, ATTACKING, HURT, DYING, DEAD
-    }
-
     private static final Map<State, int[]> STATE_FRAMES = new HashMap<>();
+
     static {
         STATE_FRAMES.put(State.IDLE, new int[]{1, 2});
         STATE_FRAMES.put(State.ATTACKING, new int[]{4, 5});
@@ -19,17 +14,16 @@ public class EnemyEntity extends SpriteEntity {
         STATE_FRAMES.put(State.DEAD, new int[]{3});
     }
 
-    private float frameDuration = 200;
+    private final float frameDuration = 200;
     private float frameDelta = 0;
     private int currentFrameIndex = 0;
-    private Textures spritesheet;
+    private final Textures spritesheet;
     private State currentState = State.IDLE;
     private int health;
-    private int maxHealth;
-    private int attackDamage;
-    private float attackCooldown = 1000; // 1 second
+    private final int maxHealth;
+    private final int attackDamage;
+    private final float attackCooldown = 1000; // 1 second
     private float attackTimer = 0;
-
     public EnemyEntity(double x, double y, Textures spriteSheet, double speed, int maxHealth, int attackDamage) {
         super(x, y, spriteSheet.getTile(1), speed);
         this.spritesheet = spriteSheet;
@@ -119,5 +113,10 @@ public class EnemyEntity extends SpriteEntity {
 
     public int getMaxHealth() {
         return maxHealth;
+    }
+
+    // Animation states
+    public enum State {
+        IDLE, ATTACKING, HURT, DYING, DEAD
     }
 }

@@ -16,9 +16,10 @@ public class Weapons {
                 new GunSprite(
                         "/potato/sprites/gun/shotgun.png",
                         "/potato/sprites/gun/shotgun-icon.png",
-                        48, 48, 60  , 5), 2);
+                        48, 48, 60, 5), 2);
     }
 
     // Private constructor to prevent instantiation
-    private Weapons() {}
+    private Weapons() {
+    }
 }

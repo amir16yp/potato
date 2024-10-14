@@ -1,6 +1,5 @@
 package potato;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class SpriteEntity {
@@ -13,14 +12,6 @@ public class SpriteEntity {
     private double size;
     private Runnable onInteractPlayer;
 
-    public void deactivate() {
-        this.active = false;
-    }
-
-    public void setOnInteractPlayer(Runnable action) {
-        this.onInteractPlayer = action;
-    }
-
     public SpriteEntity(double x, double y, BufferedImage sprite, double speed) {
         this.x = x;
         this.y = y;
@@ -29,6 +20,14 @@ public class SpriteEntity {
         this.speed = speed;
         this.active = true;
         this.size = 1;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void setOnInteractPlayer(Runnable action) {
+        this.onInteractPlayer = action;
     }
 
     public void render(Renderer renderer, Player player) {
@@ -103,10 +102,6 @@ public class SpriteEntity {
         this.y = y;
     }
 
-    public void setSprite(BufferedImage sprite) {
-        this.sprite = sprite;
-    }
-
     public double getX() {
         return x;
     }
@@ -117,6 +112,10 @@ public class SpriteEntity {
 
     public BufferedImage getSprite() {
         return sprite;
+    }
+
+    public void setSprite(BufferedImage sprite) {
+        this.sprite = sprite;
     }
 
     public double getY() {

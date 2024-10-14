@@ -4,7 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class GlyphText {
-    private GlyphRenderer renderer;
+    private final GlyphRenderer renderer;
     private String text;
     private int scale;
     private Color textColor;
@@ -18,8 +18,7 @@ public class GlyphText {
         this.renderer = Renderer.TextRenderer;
     }
 
-    public GlyphText(GlyphRenderer renderer, String text, int scale)
-    {
+    public GlyphText(GlyphRenderer renderer, String text, int scale) {
         this.renderer = renderer;
         this.text = text;
         this.textColor = Color.WHITE;
@@ -27,8 +26,7 @@ public class GlyphText {
     }
 
     public void draw(Graphics2D g, int x, int y) {
-        if (text.isEmpty())
-        {
+        if (text.isEmpty()) {
             return;
         }
         if (backgroundColor != null) {
@@ -99,21 +97,21 @@ public class GlyphText {
         return this;
     }
 
+    public String getText() {
+        return text;
+    }
+
     public GlyphText setText(String text) {
         this.text = text;
         return this;
     }
 
-    public String getText() {
-        return text;
+    public int getScale() {
+        return scale;
     }
 
     public GlyphText setScale(int scale) {
         this.scale = scale;
         return this;
-    }
-
-    public int getScale() {
-        return scale;
     }
 }

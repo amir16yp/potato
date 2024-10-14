@@ -1,11 +1,9 @@
 package potato.input;
 
-import potato.*;
-import sun.rmi.runtime.Log;
+import potato.Enemies;
+import potato.Weapons;
 
-import javax.imageio.ImageIO;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -83,13 +81,15 @@ public class DefaultInputHandler implements IInputHandler {
              */
             Enemies.spawnEntity(coords[0], coords[1], Enemies.SHROOM_TEXTURES, 1.2);
         }
-        if (key == KeyEvent.VK_1)
-        {
+        if (key == KeyEvent.VK_1) {
             player.setWeapon(Weapons.PISTOL);
         }
-        if (key == KeyEvent.VK_2)
-        {
+        if (key == KeyEvent.VK_2) {
             player.setWeapon(Weapons.SHOTGUN);
+        }
+
+        if (key == KeyEvent.VK_ESCAPE) {
+            gameLoop.togglePause();
         }
     }
 }

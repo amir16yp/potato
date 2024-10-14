@@ -1,7 +1,6 @@
 package potato;
 
-public enum RenderTarget
-{
+public enum RenderTarget {
     GAME,
     HUD
 }

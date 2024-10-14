@@ -1,18 +1,17 @@
 package potato;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class Projectile {
+    protected Logger logger = new Logger(this.getClass().getName());
     private double x;
     private double y;
-    private double angle;
-    private double speed;
-    private int damage;
-    private BufferedImage sprite;
+    private final double angle;
+    private final double speed;
+    private final int damage;
+    private final BufferedImage sprite;
     private boolean active;
-    protected Logger logger = new Logger(this.getClass().getName());
-    private double size;
+    private final double size;
 
     public Projectile(double x, double y, double angle, double speed, int damage, int textureID) {
         this.x = x;
@@ -74,9 +73,8 @@ public class Projectile {
         active = false;
     }
 
-    public void deactivate(String reason)
-    {
-        logger.log("Deactivated projectile at " + x + "," + y +" : " + reason);
+    public void deactivate(String reason) {
+        logger.log("Deactivated projectile at " + x + "," + y + " : " + reason);
         active = false;
     }
 

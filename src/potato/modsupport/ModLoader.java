@@ -2,7 +2,6 @@ package potato.modsupport;
 
 import potato.Logger;
 
-import java.awt.*;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -13,9 +12,9 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class ModLoader {
-    private List<Mod> loadedMods = new ArrayList<>();
     private static final String MODS_FOLDER = "mods";
-    private Logger logger = new Logger(this.getClass().getName());
+    private final List<Mod> loadedMods = new ArrayList<>();
+    private final Logger logger = new Logger(this.getClass().getName());
 
     public void loadMods() {
         File modsFolder = new File(MODS_FOLDER);

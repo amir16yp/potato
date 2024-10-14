@@ -7,22 +7,19 @@ import potato.modsupport.ModLoader;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferStrategy;
 import java.io.IOException;
 
 public class Game extends JFrame {
+    public static final ModLoader MOD_LOADER = new ModLoader();
     public static int WIDTH = 640; // Now modifiable
     public static int HEIGHT = 480; // Now modifiable
-
     public static Renderer renderer;
     public static Player player;
     public static Textures textures;
     public static Textures hudTextures;
     public static Textures projectileTextures;
     public static InputHandler inputHandler = new InputHandler();
-    ;
     public static GameLoop gameLoop;
-    public static final ModLoader MOD_LOADER = new ModLoader();
     public Canvas canvas;
 
     public Game() {
@@ -57,6 +54,26 @@ public class Game extends JFrame {
         gameLoop = new GameLoop(this);
     }
 
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() ->
+        {
+            MOD_LOADER.loadMods();
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
+                mod.preinit();
+            }
+            Game game = new Game();
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
+                mod.init();
+            }
+            //game.setResolution(800, 600);
+            game.start();
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
+                mod.postinit();
+            }
+            //game.setResolution(800, 600);
+        });
+    }
+
     public void start() {
         gameLoop.start();
     }
@@ -73,6 +90,7 @@ public class Game extends JFrame {
             Renderer.GUN_NAME_TEXT.setText(player.getWeapon().getName());
             Renderer.GUN_AMMO_TEXT.setText(String.valueOf(player.getWeapon().getAmmo()));
         }
+        Renderer.FPS_TEXT.setText("FPS:" + gameLoop.getFPS());
         MOD_LOADER.updateMods();
     }
 
@@ -96,25 +114,5 @@ public class Game extends JFrame {
         // Adjust the actual window size
         pack();
         setLocationRelativeTo(null); // Center the window on screen
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() ->
-        {
-            MOD_LOADER.loadMods();
-            for (Mod mod : MOD_LOADER.getLoadedMods()) {
-                mod.preinit();
-            }
-            Game game = new Game();
-            for (Mod mod : MOD_LOADER.getLoadedMods()) {
-                mod.init();
-            }
-            //game.setResolution(800, 600);
-            game.start();
-            for (Mod mod : MOD_LOADER.getLoadedMods()) {
-                mod.postinit();
-            }
-            game.setResolution(800, 600);
-        });
     }
 }

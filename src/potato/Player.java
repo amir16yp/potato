@@ -6,18 +6,31 @@ import java.awt.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Player {
+    // Constants for collision detection
+    private static final double COLLISION_RADIUS = 0.2;
     private double x;
     private double y;
     private double planeX;
     private double planeY;
     private double angle;
-    private double moveSpeed;
-    private double rotateSpeed;
+    private final double moveSpeed;
+    private final double rotateSpeed;
     private Weapon weapon;
-    private CopyOnWriteArrayList<Projectile> projectiles;
-    private double health = 100.0;
-    // Constants for collision detection
-    private static final double COLLISION_RADIUS = 0.2;
+    private final CopyOnWriteArrayList<Projectile> projectiles;
+    private final double health = 100.0;
+
+    public Player(double x, double y, double angle) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.moveSpeed = 3.0; // Units per second
+        this.rotateSpeed = Math.PI; // Radians per second
+        this.projectiles = new CopyOnWriteArrayList<>();
+        // Initialize with a default weapon
+        this.weapon = Weapons.SHOTGUN;
+        this.planeX = Math.cos(angle + Math.PI / 2) * 0.66;
+        this.planeY = Math.sin(angle + Math.PI / 2) * 0.66;
+    }
 
     public double getHealth() {
         return health;
@@ -29,20 +42,6 @@ public class Player {
 
     public double getDirY() {
         return Math.sin(angle);
-    }
-
-
-    public Player(double x, double y, double angle) {
-        this.x = x;
-        this.y = y;
-        this.angle = angle;
-        this.moveSpeed = 2.0; // Units per second
-        this.rotateSpeed = Math.PI; // Radians per second
-        this.projectiles = new CopyOnWriteArrayList<>();
-        // Initialize with a default weapon
-        this.weapon = Weapons.SHOTGUN;
-        this.planeX = Math.cos(angle + Math.PI/2) * 0.66;
-        this.planeY = Math.sin(angle + Math.PI/2) * 0.66;
     }
 
     public double getSpeed() {
@@ -68,8 +67,7 @@ public class Player {
 
     private void handleMovement() {
         Map map = Game.renderer.getMap();
-        if (map == null)
-        {
+        if (map == null) {
             return;
         }
         InputHandler inputHandler = Game.inputHandler;
@@ -93,10 +91,10 @@ public class Player {
             dy += Math.sin(angle + Math.PI / 2) * moveDistance;
         }
 
-        if (!map.isWall((int)(x + dx + Math.signum(dx) * COLLISION_RADIUS), (int)y)) {
+        if (!map.isWall((int) (x + dx + Math.signum(dx) * COLLISION_RADIUS), (int) y)) {
             x += dx;
         }
-        if (!map.isWall((int)x, (int)(y + dy + Math.signum(dy) * COLLISION_RADIUS))) {
+        if (!map.isWall((int) x, (int) (y + dy + Math.signum(dy) * COLLISION_RADIUS))) {
             y += dy;
         }
     }
@@ -139,10 +137,10 @@ public class Player {
 
     public Rectangle getHitbox() {
         int scale = 32; // Assuming 1 game unit = 32 pixels
-        int hitboxSize = (int)(2 * COLLISION_RADIUS * scale);
+        int hitboxSize = (int) (2 * COLLISION_RADIUS * scale);
         return new Rectangle(
-                (int)(x * scale - hitboxSize / 2),
-                (int)(y * scale - hitboxSize / 2),
+                (int) (x * scale - hitboxSize / 2),
+                (int) (y * scale - hitboxSize / 2),
                 hitboxSize,
                 hitboxSize
         );
@@ -193,16 +191,15 @@ public class Player {
         return planeY;
     }
 
+    public void setPlaneY(double planeY) {
+        this.planeY = planeY;
+    }
+
     public double getPlaneX() {
         return planeX;
     }
 
-    public void setPlaneX(double planeX)
-    {
+    public void setPlaneX(double planeX) {
         this.planeX = planeX;
-    }
-
-    public void setPlaneY(double planeY) {
-        this.planeY = planeY;
     }
 }

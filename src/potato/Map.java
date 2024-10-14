@@ -4,17 +4,16 @@ import java.awt.image.BufferedImage;
 import java.util.Random;
 
 public class Map {
-    protected int[][] map;
+    public static final int[] wallTextureIDs = {31};
     protected final int width;
     protected final int height;
+    protected final Random random;
+    protected final Logger logger;
     private final int minRoomSize;
     private final int maxRoomSize;
-    protected final Random random;
+    protected int[][] map;
     protected BufferedImage floorImage;
     protected BufferedImage ceilingImage;
-    protected final Logger logger;
-
-    public static final int[] wallTextureIDs = {31};
 
     public Map(int width, int height, long seed) {
         this(width, height, seed, 5, 15);
@@ -104,8 +103,8 @@ public class Map {
         for (int y = 1; y < height - 1; y++) {
             for (int x = 1; x < width - 1; x++) {
                 if (map[y][x] != 0 && random.nextDouble() < 0.1) {
-                    if ((map[y][x-1] == 0 && map[y][x+1] == 0) ||
-                            (map[y-1][x] == 0 && map[y+1][x] == 0)) {
+                    if ((map[y][x - 1] == 0 && map[y][x + 1] == 0) ||
+                            (map[y - 1][x] == 0 && map[y + 1][x] == 0)) {
                         map[y][x] = 0; // Place a door
                     }
                 }
