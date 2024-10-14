@@ -94,7 +94,7 @@ public class Renderer {
     private void renderHUD()
     {
         int count = player.getProjectiles().size();
-        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).draw(hudGraphics, 0, 0);
+        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).setTextColor(Color.YELLOW).draw(hudGraphics, 0, 0);
         // Add more HUD elements here as needed
     }
 
@@ -355,10 +355,6 @@ public class Renderer {
         int weaponY = gameHeight - weaponFrame.getHeight() + (int)weaponBobOffset;
 
         gameGraphics.drawImage(weaponFrame, weaponX, weaponY, null);
-    }
-
-    private void drawHUDSprite(BufferedImage sprite, int x, int y, int size) {
-        drawSprite(sprite, x, y, size, 0, RenderTarget.HUD);
     }
 
     private void drawFPS(long fps) {

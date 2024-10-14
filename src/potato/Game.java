@@ -102,12 +102,13 @@ public class Game extends JFrame {
             {
                 mod.init();
             }
+            //game.setResolution(800, 600);
             game.start();
             for (Mod mod : MOD_LOADER.getLoadedMods())
             {
                 mod.postinit();
             }
-            //wwgame.setResolution(800, 600);
+            //game.setResolution(800, 600);
         });
     }
 }
