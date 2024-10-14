@@ -3,6 +3,7 @@ package potato;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
+import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Renderer {
@@ -13,8 +14,8 @@ public class Renderer {
     private static final double WALL_HEIGHT = 1.0;
     private static final double EPSILON = 1e-4;
 
-    private final int width;
-    private final int height;
+    private int width;
+    private int height;
     private final BufferStrategy bufferStrategy;
     private Map map;
     private final Player player;
@@ -47,6 +48,7 @@ public class Renderer {
         castRays();
         renderEntities();
         renderWeapon();
+        renderProjectile();
         drawFPS(fps);
         presentBuffer();
     }
@@ -56,15 +58,15 @@ public class Renderer {
         offScreenGraphics.fillRect(0, 0, width, height);
     }
 
-    private void renderProjectile()
-    {
-        for (Projectile projectile : this.player.getProjectiles())
-        {
-            if (projectile.isActive())
-            {
+    private void renderProjectile() {
+        // Use an iterator to safely remove projectiles while iterating
+        Iterator<Projectile> iterator = this.player.getProjectiles().iterator();
+        while (iterator.hasNext()) {
+            Projectile projectile = iterator.next();
+            if (projectile.isActive()) {
                 drawProjectile(projectile);
             } else {
-                this.player.getProjectiles().remove(projectile);
+                iterator.remove(); // Safely remove inactive projectiles
             }
         }
     }
@@ -77,22 +79,22 @@ public class Renderer {
         // Calculate the angle between player's view and the projectile
         double angle = Math.atan2(dy, dx) - player.getAngle();
 
-        // Normalize the angle
+        // Normalize the angle to stay within [-PI, PI]
         while (angle < -Math.PI) angle += 2 * Math.PI;
         while (angle > Math.PI) angle -= 2 * Math.PI;
 
-        // Check if the projectile is in the player's field of view
-        if (Math.abs(angle) > HALF_FOV) return;
+        // Ensure the projectile is within the player's field of view
+        if (Math.abs(angle) > HALF_FOV || distance > MAX_DISTANCE) return;
 
-        // Calculate the projectile's position on screen
+        // Calculate the screen position based on the angle
         int screenX = (int) ((angle / HALF_FOV + 1) * width / 2);
 
-        // Calculate the projectile's size based on distance
+        // Calculate the projectile's size based on its distance
         double size = (height / distance) * projectile.getSize();
         int halfSize = (int) (size / 2);
 
-        // Calculate the vertical position (center of screen)
-        int screenY = height / 2;
+        // Calculate the vertical center of the projectile on the screen
+        int screenY = HALF_HEIGHT;
 
         // Get the projectile's sprite
         BufferedImage sprite = projectile.getSprite();
@@ -100,20 +102,20 @@ public class Renderer {
         // Draw the projectile
         for (int x = -halfSize; x < halfSize; x++) {
             if (screenX + x < 0 || screenX + x >= width) continue;
-            if (distance > zBuffer[screenX + x]) continue;
+            if (distance > zBuffer[screenX + x]) continue; // Ensure it's in front of other objects
 
             for (int y = -halfSize; y < halfSize; y++) {
                 int drawY = screenY + y;
                 if (drawY < 0 || drawY >= height) continue;
 
-                int texX = (x + halfSize) * sprite.getWidth() / (int)size;
-                int texY = (y + halfSize) * sprite.getHeight() / (int)size;
+                int texX = (x + halfSize) * sprite.getWidth() / (int) size;
+                int texY = (y + halfSize) * sprite.getHeight() / (int) size;
 
                 int color = sprite.getRGB(texX, texY);
 
-                // Check if the pixel is not transparent
+                // Only draw non-transparent pixels
                 if ((color & 0xFF000000) != 0) {
-                    // Apply distance shading
+                    // Apply shading based on distance
                     color = applyShading(color, distance);
                     offScreenBuffer.setRGB(screenX + x, drawY, color);
                 }
@@ -132,9 +134,18 @@ public class Renderer {
     }
 
     private void drawHorizontalLine(int y, Color color) {
-        for (int x = 0; x < width; x++) {
-            offScreenBuffer.setRGB(x, y, color.getRGB());
+        try {
+            if (y < 0 || y >= height) return; // Avoid out-of-bounds errors
+            for (int x = 0; x < width; x++) {
+                // Add a check to ensure x is within bounds.
+                if (x < 0 || x >= width) continue;
+                offScreenBuffer.setRGB(x, y, color.getRGB());
+            }
+        } catch (Exception e)
+        {
+            return;
         }
+
     }
 
     private void castRays() {
@@ -263,49 +274,57 @@ public class Renderer {
 
     private void renderEntities() {
         for (Entity entity : entities) {
-            if (isEntityVisible(entity)) {
+            {
                 renderEntity(entity);
             }
         }
     }
 
-    private boolean isEntityVisible(Entity entity) {
-        double dx = entity.getX() - player.getX();
-        double dy = entity.getY() - player.getY();
-        double distance = Math.sqrt(dx * dx + dy * dy);
-        double angle = Math.atan2(dy, dx) - player.getAngle();
-        return Math.abs(angle) < HALF_FOV || distance < 0.5;
-    }
 
     private void renderEntity(Entity entity) {
         double dx = entity.getX() - player.getX();
         double dy = entity.getY() - player.getY();
         double distance = Math.sqrt(dx * dx + dy * dy);
-        double angle = Math.atan2(dy, dx) - player.getAngle();
 
-        int screenX = (int) ((angle + HALF_FOV) / FOV * width);
+        // Prevent rendering if the entity is at the player's position
+        if (distance < EPSILON) return;
+
+        double angle = Math.atan2(dy, dx) - player.getAngle();
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+
+        if (Math.abs(angle) > HALF_FOV) return;
+
+        int screenX = (int) ((angle / HALF_FOV + 1) * width / 2);
+        double size = (height / distance) * entity.getSize();
+        int halfSize = (int) (size / 2);
         int screenY = height / 2;
-        int spriteSize = (int) (height / distance);
 
         BufferedImage sprite = entity.getSprite();
-        drawSprite(sprite, screenX, screenY, spriteSize, distance);
+        drawSprite(sprite, screenX, screenY, (int) size, distance);
     }
-
     private void drawSprite(BufferedImage sprite, int screenX, int screenY, int size, double distance) {
         int halfSize = size / 2;
+
+        // Iterate over each pixel of the sprite
         for (int sx = -halfSize; sx < halfSize; sx++) {
             int x = screenX + sx;
+
+            // Skip if outside screen bounds or if the entity is further than the wall
             if (x < 0 || x >= width || distance >= zBuffer[x]) continue;
 
             for (int sy = -halfSize; sy < halfSize; sy++) {
                 int y = screenY + sy;
+
                 if (y < 0 || y >= height) continue;
 
                 int textureX = (sx + halfSize) * sprite.getWidth() / size;
                 int textureY = (sy + halfSize) * sprite.getHeight() / size;
                 int color = sprite.getRGB(textureX, textureY);
 
+                // Check if the pixel is not transparent
                 if ((color & 0xFF000000) != 0) {
+                    // Apply distance shading and draw pixel
                     color = applyShading(color, distance);
                     offScreenBuffer.setRGB(x, y, color);
                 }
@@ -335,6 +354,18 @@ public class Renderer {
 
     public void setMap(Map map) {
         this.map = map;
+    }
+
+    public void setDimensions(int width, int height) {
+        this.width = width;
+        this.height = height;
+        HALF_HEIGHT = height / 2;
+
+        // Reinitialize buffers to match new dimensions
+        this.zBuffer = new double[width];; // Depth buffer should account for both width and height
+        this.offScreenBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        this.offScreenGraphics = offScreenBuffer.createGraphics();
+        clearScreen();
     }
 
     private static class RaycastHit {

@@ -23,7 +23,7 @@ public class Projectile {
         this.damage = damage;
         this.sprite = sprite;
         this.active = true;
-        this.size = 32;
+        this.size = 0.1;
         logger.Log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 
@@ -46,37 +46,13 @@ public class Projectile {
 
         for (Entity entity : Game.renderer.entities)
         {
-            if (checkEntityCollision(entity))
-            {
-                entity.takeDamage(this.damage);
-                deactivate("entity");
-            }
+            // TODO: add entity collision
         }
 
         // Deactivate if out of bounds
         if (x < 0 || x >= Game.renderer.getMap().getWidth() || y < 0 || y >= Game.renderer.getMap().getHeight()) {
             deactivate("out of bounds");
         }
-    }
-
-
-    private boolean checkEntityCollision(Entity entity) {
-        double[] entityHitbox = entity.getHitbox();
-
-        // Calculate projectile's screen position
-        double relativeX = x - Game.player.getX();
-        double relativeY = y - Game.player.getY();
-        double angleToProjectile = Math.atan2(relativeY, relativeX) - Game.player.getAngle();
-
-        // Normalize the angle
-        while (angleToProjectile > Math.PI) angleToProjectile -= 2 * Math.PI;
-        while (angleToProjectile < -Math.PI) angleToProjectile += 2 * Math.PI;
-
-        int projectileScreenX = (int) ((angleToProjectile + Renderer.HALF_FOV) / Renderer.FOV * Game.WIDTH);
-        int projectileScreenY = Game.HEIGHT / 2;
-
-        return (projectileScreenX >= entityHitbox[0] && projectileScreenX <= entityHitbox[2] &&
-                projectileScreenY >= entityHitbox[1] && projectileScreenY <= entityHitbox[3]);
     }
 
 

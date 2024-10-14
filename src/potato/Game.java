@@ -5,14 +5,15 @@ import java.awt.*;
 import java.awt.image.BufferStrategy;
 
 public class Game extends JFrame {
-    public static final int WIDTH = 640;
-    public static final int HEIGHT = 480;
+    public static int WIDTH = 640; // Now modifiable
+    public static int HEIGHT = 480; // Now modifiable
 
     public static Renderer renderer;
     public static Player player;
     public static Textures textures;
     public static InputHandler inputHandler;
     public static GameLoop gameLoop;
+    public Canvas canvas;
 
     public Game() {
         setTitle("Potato");
@@ -23,8 +24,8 @@ public class Game extends JFrame {
         player = new Player(1.5, 1.5, 0); // Starting position and angle
         textures = new Textures("textures.png", 16, 16); // Load textures
 
-        Canvas canvas = new Canvas();
-        canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));;
+        canvas = new Canvas();
+        canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
         add(canvas);
 
         pack();
@@ -48,8 +49,7 @@ public class Game extends JFrame {
 
     public void update() {
         player.update();
-        for (Entity entity : Game.renderer.entities)
-        {
+        for (Entity entity : Game.renderer.entities) {
             entity.update();
         }
     }
@@ -58,10 +58,29 @@ public class Game extends JFrame {
         renderer.render(gameLoop.getFPS());
     }
 
+    // Method to set resolution
+    public void setResolution(int width, int height) {
+        WIDTH = width;
+        HEIGHT = height;
+
+        // Update JFrame and Canvas size
+        setSize(WIDTH, HEIGHT);
+        canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        canvas.setSize(WIDTH, HEIGHT);
+
+        // Update Renderer dimensions
+        renderer.setDimensions(WIDTH, HEIGHT);
+
+        // Adjust the actual window size
+        pack();
+        setLocationRelativeTo(null); // Center the window on screen
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             Game game = new Game();
             game.start();
+            game.setResolution(640, 480);
         });
     }
 }

@@ -11,7 +11,7 @@ public class Entity {
     protected boolean active;
     protected double speed;
     private double health = 100;
-
+    private double size;
     public Entity(double x, double y, BufferedImage sprite, double speed) {
         this.x = x;
         this.y = y;
@@ -19,6 +19,7 @@ public class Entity {
         this.sprite = sprite;
         this.speed = speed;
         this.active = true;
+        this.size = 1;
     }
 
     public double getHealth() {
@@ -64,69 +65,6 @@ public class Entity {
         return angle;
     }
 
-    public double[] getHitbox() {
-        Player player = Game.player;
-        double relativeX = x - player.getX();
-        double relativeY = y - player.getY();
-        double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-
-        // Calculate the angle between the player and the entity
-        double angleToPlayer = Math.atan2(relativeY, relativeX) - player.getAngle();
-
-        // Normalize the angle
-        while (angleToPlayer > Math.PI) angleToPlayer -= 2 * Math.PI;
-        while (angleToPlayer < -Math.PI) angleToPlayer += 2 * Math.PI;
-
-        // Calculate the entity's position on the screen
-        int screenX = (int) ((angleToPlayer + Renderer.HALF_FOV) / Renderer.FOV * Game.WIDTH);
-        int screenY = Game.HEIGHT / 2;
-
-        // Calculate the size of the entity on the screen
-        int spriteSize = (int) (Game.HEIGHT / (distance + 0.1));
-
-        // Calculate hitbox dimensions
-        int hitboxLeft = screenX - spriteSize / 2;
-        int hitboxTop = screenY - spriteSize / 2;
-        int hitboxRight = screenX + spriteSize / 2;
-        int hitboxBottom = screenY + spriteSize / 2;
-
-        return new double[]{hitboxLeft, hitboxTop, hitboxRight, hitboxBottom};
-    }
-
-    public boolean isVisibleToPlayer(Player player, Map map) {
-        double dx = this.x - player.getX();
-        double dy = this.y - player.getY();
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        // Check if the entity is within rendering distance
-        if (distance > Renderer.MAX_DISTANCE) {
-            return false;
-        }
-
-        // Check if the entity is within the player's field of view
-        double angleDiff = Math.abs(normalizeAngle(Math.atan2(dy, dx) - player.getAngle()));
-        if (angleDiff > Renderer.HALF_FOV && distance > 0.5) {
-            return false;
-        }
-
-        // Perform a simple ray cast to check for obstacles
-        double step = 0.1; // Adjust this value for precision vs performance
-        double rayX = player.getX();
-        double rayY = player.getY();
-        double rayAngle = Math.atan2(dy, dx);
-
-        for (double d = 0; d < distance; d += step) {
-            rayX += Math.cos(rayAngle) * step;
-            rayY += Math.sin(rayAngle) * step;
-
-            if (map.isWall((int)rayX, (int)rayY)) {
-                return false; // Hit a wall before reaching the entity
-            }
-        }
-
-        return true; // No obstacles found
-    }
-
     // Getter and setter methods...
 
     public void setPosition(double x, double y) {
@@ -156,5 +94,13 @@ public class Entity {
 
     public void setY(double y) {
         this.y = y;
+    }
+
+    public double getSize() {
+        return size;
+    }
+
+    public void setSize(double size) {
+        this.size = size;
     }
 }
