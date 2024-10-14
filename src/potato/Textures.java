@@ -38,9 +38,9 @@ public class Textures {
                     tiles.put(id, tile);
                 }
             }
-            logger.Log("Loaded " + tiles.size() + " tiles");
+            logger.log("Loaded " + tiles.size() + " tiles");
         } catch (IOException e) {
-            logger.Log("Error loading tileset: " + e.getMessage());
+            logger.log("Error loading tileset: " + e.getMessage());
             throw new RuntimeException("Failed to load tileset", e);
         }
     }
@@ -48,7 +48,7 @@ public class Textures {
     public BufferedImage getTile(int id) {
         BufferedImage tile = tiles.get(id);
         if (tile == null) {
-            logger.Log("Warning: Tile with ID " + id + " not found");
+            logger.log("Warning: Tile with ID " + id + " not found");
             return createPlaceholderTile();
         }
         return tile;

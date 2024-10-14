@@ -1,5 +1,8 @@
 package potato;
 
+import potato.modsupport.Mod;
+import potato.modsupport.ModLoader;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -15,6 +18,7 @@ public class Game extends JFrame {
     public static Textures textures;
     public static InputHandler inputHandler;
     public static GameLoop gameLoop;
+    public static final ModLoader MOD_LOADER = new ModLoader();
     public Canvas canvas;
 
     public Game() {
@@ -58,10 +62,14 @@ public class Game extends JFrame {
         for (Entity entity : Game.renderer.entities) {
             entity.update();
         }
+        for (Mod mod : MOD_LOADER.getLoadedMods())
+        {
+            mod.update();
+        }
     }
 
     public void render() {
-        renderer.render(gameLoop.getFPS());
+        renderer.render();
     }
 
     // Method to set resolution
@@ -83,8 +91,14 @@ public class Game extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
+        SwingUtilities.invokeLater(() ->
+        {
             Game game = new Game();
+            MOD_LOADER.loadMods();
+            for (Mod mod : MOD_LOADER.getLoadedMods())
+            {
+                mod.init();
+            }
             game.start();
             //wwgame.setResolution(800, 600);
         });

@@ -21,15 +21,15 @@ public class Logger {
         logs.add(logMessage);
     }
 
-    public void Log(String msg) {
+    public void log(String msg) {
         logInternal(msg);
     }
 
-    public void Error(String msg) {
+    public void error(String msg) {
         logInternal("[ERROR] " + msg);
     }
 
-    public void Error(Exception err) {
+    public void error(Exception err) {
         StringBuilder stackTraceBuilder = new StringBuilder();
         stackTraceBuilder.append("[ERROR]\n");
         stackTraceBuilder.append(err.getMessage());

@@ -105,7 +105,7 @@ public class Map {
 
     public boolean isWall(int x, int y) {
         if (x < 0 || x >= width || y < 0 || y >= height) {
-            logger.Log("Out of bounds wall check: " + x + "," + y);
+            logger.log("Out of bounds wall check: " + x + "," + y);
             return true; // Treat out of bounds as walls
         }
         return map[y][x] != 0;
@@ -115,7 +115,7 @@ public class Map {
         try {
             return Game.textures.getTile(map[y][x]);
         } catch (Exception e) {
-            logger.Log("Error getting texture for tile at " + x + "," + y + ": " + e.getMessage());
+            logger.log("Error getting texture for tile at " + x + "," + y + ": " + e.getMessage());
             return OutdoorMap.createSkyGradient(32, 32);
         }
     }
@@ -138,7 +138,7 @@ public class Map {
                 }
             }
             rowBuilder.append("]"); // Close the row with a closing bracket
-            logger.Log(rowBuilder.toString()); // Log the formatted row
+            logger.log(rowBuilder.toString()); // Log the formatted row
         }
     }
 
@@ -153,7 +153,7 @@ public class Map {
         if (x >= 0 && x < width && y >= 0 && y < height) {
             map[y][x] = tileID;
         } else {
-            logger.Log("Attempt to set tile out of bounds: " + x + "," + y);
+            logger.log("Attempt to set tile out of bounds: " + x + "," + y);
         }
     }
 }

@@ -9,7 +9,6 @@ import java.util.Set;
 public class InputHandler extends KeyAdapter {
     private final Renderer renderer;
     private final Set<Integer> heldKeys = new HashSet<>();
-    private boolean mouseLeftButtonHeld = false;
 
     public InputHandler(Renderer renderer) {
         this.renderer = renderer;
@@ -20,7 +19,7 @@ public class InputHandler extends KeyAdapter {
         int key = e.getKeyCode();
         heldKeys.add(key);
 
-        handleGameInput(key);
+        handleOtherInput(key);
     }
 
     @Override
@@ -28,39 +27,39 @@ public class InputHandler extends KeyAdapter {
         heldKeys.remove(e.getKeyCode());
     }
 
-    public boolean isKeyHeld(int keyCode) {
+    protected boolean isKeyHeld(int keyCode) {
         return heldKeys.contains(keyCode);
     }
 
-    public boolean isMovingForward() {
+    protected boolean isMovingForward() {
         return isKeyHeld(KeyEvent.VK_W) || isKeyHeld(KeyEvent.VK_UP);
     }
 
-    public boolean isMovingBackward() {
+    protected boolean isMovingBackward() {
         return isKeyHeld(KeyEvent.VK_S) || isKeyHeld(KeyEvent.VK_DOWN);
     }
 
-    public boolean isStrafingLeft() {
+    protected boolean isStrafingLeft() {
         return isKeyHeld(KeyEvent.VK_A) || isKeyHeld(KeyEvent.VK_LEFT);
     }
 
-    public boolean isStrafingRight() {
+    protected boolean isStrafingRight() {
         return isKeyHeld(KeyEvent.VK_D) || isKeyHeld(KeyEvent.VK_RIGHT);
     }
 
-    public boolean isRotatingLeft() {
+    protected boolean isRotatingLeft() {
         return isKeyHeld(KeyEvent.VK_Q);
     }
 
-    public boolean isRotatingRight() {
+    protected boolean isRotatingRight() {
         return isKeyHeld(KeyEvent.VK_E);
     }
 
-    public boolean isFiring() {
+    protected boolean isFiring() {
         return isKeyHeld(KeyEvent.VK_SPACE);
     }
 
-    private void handleGameInput(int key) {
+    protected void handleOtherInput(int key) {
         if (key == KeyEvent.VK_X)
         {
             try {

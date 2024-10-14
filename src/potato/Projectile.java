@@ -24,7 +24,7 @@ public class Projectile {
         this.sprite = sprite;
         this.active = true;
         this.size = 0.2;
-        logger.Log("Created projectile at " + x + "," + y + " with angle " + angle);
+        logger.log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 
     public void update() {
@@ -75,13 +75,13 @@ public class Projectile {
     }
 
     public void deactivate() {
-        logger.Log("Deactivated projectile at " + x + "," + y);
+        logger.log("Deactivated projectile at " + x + "," + y);
         active = false;
     }
 
     public void deactivate(String reason)
     {
-        logger.Log("Deactivated projectile at " + x + "," + y +" : " + reason);
+        logger.log("Deactivated projectile at " + x + "," + y +" : " + reason);
         active = false;
     }
 

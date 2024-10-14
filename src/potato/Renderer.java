@@ -1,5 +1,7 @@
 package potato;
 
+import potato.modsupport.Mod;
+
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
@@ -39,7 +41,7 @@ public class Renderer {
         this.offScreenGraphics = offScreenBuffer.createGraphics();
     }
 
-    public void render(long fps) {
+    public void render() {
         clearScreen();
         if (map == null) {
             map = new Map(32, 32, 123);
@@ -50,7 +52,11 @@ public class Renderer {
         renderEntities();
         renderWeapon();
         renderProjectile();
-        drawFPS(fps);
+        drawFPS(Game.gameLoop.getFPS());
+        for (Mod mod : Game.MOD_LOADER.getLoadedMods())
+        {
+            mod.draw(offScreenGraphics);
+        }
         presentBuffer();
     }
 
