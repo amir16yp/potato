@@ -7,7 +7,7 @@ public class Enemies
 
     public static void spawnEntity(int x, int y, Textures textures, double size)
     {
-        EnemyEntity enemyEntity = new EnemyEntity(x, y, textures, 0);
+        EnemyEntity enemyEntity = new EnemyEntity(x, y, textures, 3, 10, 10);
         enemyEntity.setSize(size);
         Game.renderer.entities.add(enemyEntity);
     }

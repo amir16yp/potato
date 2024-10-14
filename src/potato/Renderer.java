@@ -36,6 +36,15 @@ public class Renderer {
     public static final GlyphText GUN_NAME_TEXT = new GlyphText("", 2);
     public static final GlyphText GUN_AMMO_TEXT = new GlyphText("", 2);
 
+    public Graphics2D getGameGraphics() {
+        return gameGraphics;
+    }
+
+    public Graphics2D getHudGraphics() {
+        return hudGraphics;
+    }
+
+
     public double getGameHeight() {
         return gameHeight;
     }
@@ -93,8 +102,6 @@ public class Renderer {
         }
         presentBuffers();
     }
-
-
     private void renderHUD() {
         drawHealth();
         drawWeaponIcon();

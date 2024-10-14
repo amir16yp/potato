@@ -83,5 +83,13 @@ public class DefaultInputHandler implements IInputHandler {
              */
             Enemies.spawnEntity(coords[0], coords[1], Enemies.SHROOM_TEXTURES, 1.2);
         }
+        if (key == KeyEvent.VK_1)
+        {
+            player.setWeapon(Weapons.PISTOL);
+        }
+        if (key == KeyEvent.VK_2)
+        {
+            player.setWeapon(Weapons.SHOTGUN);
+        }
     }
 }

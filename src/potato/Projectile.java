@@ -1,5 +1,6 @@
 package potato;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class Projectile {
@@ -40,11 +41,7 @@ public class Projectile {
             y = newY;
         } else {
             deactivate("wall");
-        }
-
-        for (SpriteEntity spriteEntity : Game.renderer.entities)
-        {
-            // TODO: add entity collision
+            return;
         }
 
         // Deactivate if out of bounds

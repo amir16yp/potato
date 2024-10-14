@@ -1,5 +1,6 @@
 package potato;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class SpriteEntity {
