@@ -1,6 +1,6 @@
 package potato;
 
-import jdk.internal.util.xml.impl.Input;
+import potato.input.InputHandler;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 

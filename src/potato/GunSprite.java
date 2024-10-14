@@ -1,7 +1,7 @@
 package potato;
 
-import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

@@ -1,5 +1,6 @@
 package potato;
 
+import potato.input.InputHandler;
 import potato.modsupport.Mod;
 import potato.modsupport.ModLoader;
 
@@ -16,7 +17,7 @@ public class Game extends JFrame {
     public static Renderer renderer;
     public static Player player;
     public static Textures textures;
-    public static InputHandler inputHandler;
+    public static InputHandler inputHandler = new InputHandler();;
     public static GameLoop gameLoop;
     public static final ModLoader MOD_LOADER = new ModLoader();
     public Canvas canvas;
@@ -47,7 +48,6 @@ public class Game extends JFrame {
         BufferStrategy bufferStrategy = canvas.getBufferStrategy();
 
         renderer = new Renderer(WIDTH, HEIGHT, bufferStrategy, player, textures);
-        inputHandler = new InputHandler(renderer);
         addKeyListener(inputHandler);
         canvas.addKeyListener(inputHandler);
         gameLoop = new GameLoop(this);
@@ -93,13 +93,20 @@ public class Game extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() ->
         {
-            Game game = new Game();
             MOD_LOADER.loadMods();
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
+                mod.preinit();
+            }
+            Game game = new Game();
             for (Mod mod : MOD_LOADER.getLoadedMods())
             {
                 mod.init();
             }
             game.start();
+            for (Mod mod : MOD_LOADER.getLoadedMods())
+            {
+                mod.postinit();
+            }
             //wwgame.setResolution(800, 600);
         });
     }

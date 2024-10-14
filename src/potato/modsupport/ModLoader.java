@@ -7,10 +7,10 @@ import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.jar.JarFile;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ModLoader {
     private List<Mod> loadedMods = new ArrayList<>();
