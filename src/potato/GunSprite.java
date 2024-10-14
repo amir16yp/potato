@@ -1,6 +1,7 @@
 package potato;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,8 +21,9 @@ public class GunSprite {
     private float firingDuration;
     private int cycleCount;
     private int maxCycles;
-
-    public GunSprite(String spritesheetPath, int frameWidth, int frameHeight, float frameDuration) {
+    private int renderScale;
+    private List<BufferedImage> scaledFrames;
+    public GunSprite(String spritesheetPath, int frameWidth, int frameHeight, float frameDuration, int renderScale) {
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
         this.frameDuration = frameDuration;
@@ -32,7 +34,11 @@ public class GunSprite {
         this.firingDuration = 0;
         this.cycleCount = 0;
         this.maxCycles = 1; // Default to 1 cycle
-
+        this.renderScale = renderScale;
+        if (renderScale >= 2)
+        {
+            this.scaledFrames = new ArrayList<>(framesCount);
+        }
         try {
             this.spritesheet = ImageIO.read(getClass().getResourceAsStream(spritesheetPath));
             this.framesCount = calculateFrameCount();
@@ -40,6 +46,22 @@ public class GunSprite {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public int getRenderScale() {
+        return renderScale;
+    }
+
+    public void setRenderScale(int renderScale) {
+        this.renderScale = renderScale;
+        if (renderScale >= 2)
+        {
+            scaledFrames.clear();
+            for (BufferedImage frame : frames) {
+                scaledFrames.add(createScaledImage(frame));
+            }
+        }
+
     }
 
     private int calculateFrameCount() {
@@ -60,6 +82,40 @@ public class GunSprite {
                 col * frameWidth, row * frameHeight, frameWidth, frameHeight
         );
         frames.add(frame);
+
+        if (this.getRenderScale() >= 2)
+        {
+            BufferedImage scaledFrame = createScaledImage(frame);
+            scaledFrames.add(scaledFrame);
+        }
+
+    }
+
+    private BufferedImage createScaledImage(BufferedImage original) {
+        int scaledWidth = original.getWidth() * renderScale;
+        int scaledHeight = original.getHeight() * renderScale;
+
+        // Create a new image with the scaled dimensions
+        BufferedImage scaledImage = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
+
+        // Get the graphics context of the new image
+        Graphics2D g2d = scaledImage.createGraphics();
+
+        // Set the interpolation method to nearest neighbor for pixel art
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+        // Disable antialiasing
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+
+        // Disable alpha interpolation
+        g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
+
+        // Draw the original image onto the new image, scaling it up
+        g2d.drawImage(original, 0, 0, scaledWidth, scaledHeight, null);
+
+        g2d.dispose();
+
+        return scaledImage;
     }
 
     public void update(float deltaTime) {
@@ -106,7 +162,13 @@ public class GunSprite {
 
     public BufferedImage getCurrentFrame() {
         loadFrame(currentFrame);
-        return frames.get(currentFrame);
+        if (this.getRenderScale() >= 2)
+        {
+            return scaledFrames.get(currentFrame);
+        } else {
+            return frames.get(currentFrame);
+
+        }
     }
 
     public int getFrameCount() {

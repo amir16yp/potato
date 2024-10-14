@@ -35,6 +35,40 @@ public class Entity {
         //this.sprite = Renderer.adjustOpacity(this.sprite, (int) health);
     }
 
+    public void render(Renderer renderer, Player player) {
+        if (!active) return;
+
+        double dx = x - player.getX();
+        double dy = y - player.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Don't render if too close or too far
+        if (distance < 0.1 || distance > Renderer.MAX_DISTANCE) return;
+
+        // Calculate the angle between player's view and the entity
+        double entityAngle = Math.atan2(dy, dx) - player.getAngle();
+
+        // Normalize the angle to stay within [-PI, PI]
+        while (entityAngle < -Math.PI) entityAngle += 2 * Math.PI;
+        while (entityAngle > Math.PI) entityAngle -= 2 * Math.PI;
+
+        // Check if the entity is within the player's field of view
+        if (Math.abs(entityAngle) > Renderer.HALF_FOV) return;
+
+        // Calculate the screen position based on the angle
+        int screenX = (int) ((entityAngle / Renderer.HALF_FOV + 1) * renderer.getWidth() / 2);
+
+        // Calculate the entity's size based on its distance from the player
+        double projectedSize = (renderer.getGameHeight() / distance) * size;
+
+        // Adjust vertical position based on distance
+        int screenY = (int) (renderer.getGameHeight() / 2 * (1 + 1 / distance));
+
+        // Draw the entity
+        renderer.drawSprite(sprite, screenX, screenY, (int) projectedSize, distance, Renderer.RenderTarget.GAME);
+    }
+
+
     public void die()
     {
         this.health = 0;

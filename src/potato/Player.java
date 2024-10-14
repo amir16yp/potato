@@ -14,7 +14,7 @@ public class Player {
     private double rotateSpeed;
     private Weapon weapon;
     private CopyOnWriteArrayList<Projectile> projectiles;
-
+    private double health = 100.0;
     // Constants for collision detection
     private static final double COLLISION_RADIUS = 0.2;
 
@@ -30,6 +30,20 @@ public class Player {
         this.planeX = Math.cos(angle + Math.PI/2) * 0.66;
         this.planeY = Math.sin(angle + Math.PI/2) * 0.66;
     }
+
+    public double getSpeed() {
+        InputHandler inputHandler = Game.inputHandler;
+        int movementCount = 0;
+
+        if (inputHandler.isMovingForward()) movementCount++;
+        if (inputHandler.isMovingBackward()) movementCount++;
+        if (inputHandler.isStrafingLeft()) movementCount++;
+        if (inputHandler.isStrafingRight()) movementCount++;
+
+        // Normalize speed for diagonal movement
+        return movementCount > 0 ? (movementCount == 1 ? 1.0 : 0.707) : 0;
+    }
+
 
     public void update() {
         handleMovement();

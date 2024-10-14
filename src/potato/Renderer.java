@@ -15,34 +15,65 @@ public class Renderer {
     public static final double MAX_DISTANCE = 20.0;
     private static final double WALL_HEIGHT = 1.0;
     private static final double EPSILON = 1e-4;
-
+    private static final double WEAPON_BOB_SPEED = 4.0;
+    private static final double WEAPON_BOB_AMOUNT = 10.0;
     private int width;
     private int height;
+    private int gameHeight;
+    private int hudHeight;
     private final BufferStrategy bufferStrategy;
     private Map map;
     private final Player player;
     public final CopyOnWriteArrayList<Entity> entities = new CopyOnWriteArrayList<>();
     private final Textures textures;
-
+    public static GlyphRenderer TextRenderer = new GlyphRenderer("/potato/sprites/ascii.png");
     private double[] zBuffer;
-    private BufferedImage offScreenBuffer;
-    private Graphics2D offScreenGraphics;
+    private BufferedImage gameBuffer;
+    private BufferedImage hudBuffer;
+    private Graphics2D gameGraphics;
+    private Graphics2D hudGraphics;
+
+    public double getGameHeight() {
+        return gameHeight;
+    }
+
+    public void setGameHeight(double gameHeight) {
+        this.gameHeight = (int) gameHeight;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public void setWidth(double width) {
+        this.width = (int) width;
+    }
+
+    public enum RenderTarget {
+        GAME,
+        HUD
+    }
+
 
     public Renderer(int width, int height, BufferStrategy bufferStrategy, Player player, Textures textures) {
         this.width = width;
         this.height = height;
-        HALF_HEIGHT = height / 2;
+        this.gameHeight = (int)(height * 0.8); // 80% of height for game view
+        this.hudHeight = height - gameHeight;  // Remaining 20% for HUD
+        HALF_HEIGHT = gameHeight / 2;
         this.bufferStrategy = bufferStrategy;
         this.player = player;
         this.textures = textures;
 
         this.zBuffer = new double[width];
-        this.offScreenBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        this.offScreenGraphics = offScreenBuffer.createGraphics();
+        this.gameBuffer = new BufferedImage(width, gameHeight, BufferedImage.TYPE_INT_RGB);
+        this.hudBuffer = new BufferedImage(width, hudHeight, BufferedImage.TYPE_INT_RGB);
+        this.gameGraphics = gameBuffer.createGraphics();
+        this.hudGraphics = hudBuffer.createGraphics();
     }
 
     public void render() {
-        clearScreen();
+        clearBuffers();
         if (map == null) {
             map = new Map(32, 32, 123);
             map.printMap();
@@ -52,17 +83,26 @@ public class Renderer {
         renderEntities();
         renderWeapon();
         renderProjectile();
+        renderHUD();
         drawFPS(Game.gameLoop.getFPS());
-        for (Mod mod : Game.MOD_LOADER.getLoadedMods())
-        {
-            mod.draw(offScreenGraphics);
+        for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
+            mod.draw(gameGraphics);
         }
-        presentBuffer();
+        presentBuffers();
     }
 
-    private void clearScreen() {
-        offScreenGraphics.setColor(Color.BLACK);
-        offScreenGraphics.fillRect(0, 0, width, height);
+    private void renderHUD()
+    {
+        int count = player.getProjectiles().size();
+        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).draw(hudGraphics, 0, 0);
+        // Add more HUD elements here as needed
+    }
+
+    private void clearBuffers() {
+        gameGraphics.setColor(Color.BLACK);
+        gameGraphics.fillRect(0, 0, width, gameHeight);
+        hudGraphics.setColor(Color.BLACK);
+        hudGraphics.fillRect(0, 0, width, hudHeight);
     }
 
     private void renderProjectile() {
@@ -97,8 +137,7 @@ public class Renderer {
         int screenX = (int) ((angle / HALF_FOV + 1) * width / 2);
 
         // Calculate the projectile's size based on its distance
-        double size = (height / distance) * projectile.getSize();
-        int halfSize = (int) (size / 2);
+        double size = (gameHeight / distance) * projectile.getSize();
 
         // Calculate the vertical center of the projectile on the screen
         int screenY = HALF_HEIGHT;
@@ -106,29 +145,10 @@ public class Renderer {
         // Get the projectile's sprite
         BufferedImage sprite = projectile.getSprite();
 
-        // Draw the projectile
-        for (int x = -halfSize; x < halfSize; x++) {
-            if (screenX + x < 0 || screenX + x >= width) continue;
-            if (distance > zBuffer[screenX + x]) continue; // Ensure it's in front of other objects
-
-            for (int y = -halfSize; y < halfSize; y++) {
-                int drawY = screenY + y;
-                if (drawY < 0 || drawY >= height) continue;
-
-                int texX = (x + halfSize) * sprite.getWidth() / (int) size;
-                int texY = (y + halfSize) * sprite.getHeight() / (int) size;
-
-                int color = sprite.getRGB(texX, texY);
-
-                // Only draw non-transparent pixels
-                if ((color & 0xFF000000) != 0) {
-                    // Apply shading based on distance
-                    color = applyShading(color, distance);
-                    offScreenBuffer.setRGB(screenX + x, drawY, color);
-                }
-            }
-        }
+        // Draw the projectile using the drawSprite method
+        drawSprite(sprite, screenX, screenY, (int) size, distance, RenderTarget.GAME);
     }
+
 
     private void drawCeilingAndFloor() {
         for (int y = 0; y < height; y++) {
@@ -141,20 +161,12 @@ public class Renderer {
     }
 
     private void drawHorizontalLine(int y, Color color) {
-        try {
-            if (y < 0 || y >= height) return; // Avoid out-of-bounds errors
-            for (int x = 0; x < width; x++) {
-                // Add a check to ensure x is within bounds.
-                if (x < 0 || x >= width) continue;
-                offScreenBuffer.setRGB(x, y, color.getRGB());
-            }
-        } catch (Exception e)
-        {
-            return;
+        if (y < 0 || y >= gameHeight) return; // Avoid out-of-bounds errors
+
+        for (int x = 0; x < width; x++) {
+            gameBuffer.setRGB(x, y, color.getRGB());
         }
-
     }
-
     private void castRays() {
         double playerX = player.getX();
         double playerY = player.getY();
@@ -246,12 +258,12 @@ public class Renderer {
     }
 
     private void drawWallSlice(int x, RaycastHit hit, double rayDirX, double rayDirY) {
-        int lineHeight = (int) (height / hit.distance);
+        int lineHeight = (int) (gameHeight / hit.distance);
 
-        int drawStart = -lineHeight / 2 + height / 2;
+        int drawStart = -lineHeight / 2 + gameHeight / 2;
         if (drawStart < 0) drawStart = 0;
-        int drawEnd = lineHeight / 2 + height / 2;
-        if (drawEnd >= height) drawEnd = height - 1;
+        int drawEnd = lineHeight / 2 + gameHeight / 2;
+        if (drawEnd >= gameHeight) drawEnd = gameHeight - 1;
 
         BufferedImage texture = textures.getTile(hit.tileID);
         int texX = (int) (hit.wallX * texture.getWidth());
@@ -260,14 +272,14 @@ public class Renderer {
         }
 
         double step = 1.0 * texture.getHeight() / lineHeight;
-        double texPos = (drawStart - height / 2 + lineHeight / 2) * step;
+        double texPos = (drawStart - gameHeight / 2 + lineHeight / 2) * step;
 
         for (int y = drawStart; y < drawEnd; y++) {
             int texY = (int) texPos & (texture.getHeight() - 1);
             texPos += step;
             int color = texture.getRGB(texX, texY);
             color = applyShading(color, hit.distance);
-            offScreenBuffer.setRGB(x, y, color);
+            gameBuffer.setRGB(x, y, color);
         }
     }
 
@@ -282,75 +294,82 @@ public class Renderer {
     private void renderEntities() {
         for (Entity entity : entities) {
             {
-                renderEntity(entity);
+                entity.render(this, player);
             }
         }
     }
 
+    public void drawSprite(BufferedImage sprite, int screenX, int screenY, int size, double distance, RenderTarget target) {
+        if (sprite == null || size <= 0) return;
 
-    private void renderEntity(Entity entity) {
-        double dx = entity.getX() - player.getX();
-        double dy = entity.getY() - player.getY();
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        // Prevent rendering if the entity is at the player's position
-        if (distance < EPSILON) return;
-
-        double angle = Math.atan2(dy, dx) - player.getAngle();
-        while (angle < -Math.PI) angle += 2 * Math.PI;
-        while (angle > Math.PI) angle -= 2 * Math.PI;
-
-        if (Math.abs(angle) > HALF_FOV) return;
-
-        int screenX = (int) ((angle / HALF_FOV + 1) * width / 2);
-        double size = (height / distance) * entity.getSize();
-        int halfSize = (int) (size / 2);
-        int screenY = height / 2;
-
-        BufferedImage sprite = entity.getSprite();
-        drawSprite(sprite, screenX, screenY, (int) size, distance);
-    }
-    private void drawSprite(BufferedImage sprite, int screenX, int screenY, int size, double distance) {
         int halfSize = size / 2;
+        BufferedImage targetBuffer = (target == RenderTarget.GAME) ? gameBuffer : hudBuffer;
+        int targetHeight = (target == RenderTarget.GAME) ? gameHeight : hudHeight;
 
-        // Iterate over each pixel of the sprite
-        for (int sx = -halfSize; sx < halfSize; sx++) {
-            int x = screenX + sx;
+        // Pre-calculate texture step sizes
+        double texStepX = (double) sprite.getWidth() / size;
+        double texStepY = (double) sprite.getHeight() / size;
 
-            // Skip if outside screen bounds or if the entity is further than the wall
-            if (x < 0 || x >= width || distance >= zBuffer[x]) continue;
+        int startX = Math.max(0, screenX - halfSize);
+        int endX = Math.min(width - 1, screenX + halfSize);
+        int startY = Math.max(0, screenY - halfSize);
+        int endY = Math.min(targetHeight - 1, screenY + halfSize);
 
-            for (int sy = -halfSize; sy < halfSize; sy++) {
-                int y = screenY + sy;
+        for (int x = startX; x <= endX; x++) {
+            if (target == RenderTarget.GAME && distance >= zBuffer[x]) continue;
 
-                if (y < 0 || y >= height) continue;
+            double texX = (x - (screenX - halfSize)) * texStepX;
 
-                int textureX = (sx + halfSize) * sprite.getWidth() / size;
-                int textureY = (sy + halfSize) * sprite.getHeight() / size;
-                int color = sprite.getRGB(textureX, textureY);
+            for (int y = startY; y <= endY; y++) {
+                double texY = (y - (screenY - halfSize)) * texStepY;
 
-                // Check if the pixel is not transparent
-                if ((color & 0xFF000000) != 0) {
-                    // Apply distance shading and draw pixel
-                    color = applyShading(color, distance);
-                    offScreenBuffer.setRGB(x, y, color);
+                int textureX = (int) texX;
+                int textureY = (int) texY;
+
+                if (textureX >= 0 && textureX < sprite.getWidth() && textureY >= 0 && textureY < sprite.getHeight()) {
+                    int color = sprite.getRGB(textureX, textureY);
+
+                    if ((color & 0xFF000000) != 0) {
+                        if (target == RenderTarget.GAME) {
+                            color = applyShading(color, distance);
+                        }
+                        targetBuffer.setRGB(x, y, color);
+                    }
                 }
             }
         }
     }
 
+
     private void renderWeapon() {
-        // Implement weapon rendering here
+        Weapon weapon = this.player.getWeapon();
+        if (weapon == null) {
+            return;
+        }
+        BufferedImage weaponFrame = weapon.getGunSprite().getCurrentFrame();
+
+        double playerSpeed = player.getSpeed();
+        double weaponBobOffset = Math.sin(System.currentTimeMillis() / 1000.0 * WEAPON_BOB_SPEED) * WEAPON_BOB_AMOUNT * playerSpeed;
+
+        int weaponX = (width - weaponFrame.getWidth()) / 2;
+        int weaponY = gameHeight - weaponFrame.getHeight() + (int)weaponBobOffset;
+
+        gameGraphics.drawImage(weaponFrame, weaponX, weaponY, null);
+    }
+
+    private void drawHUDSprite(BufferedImage sprite, int x, int y, int size) {
+        drawSprite(sprite, x, y, size, 0, RenderTarget.HUD);
     }
 
     private void drawFPS(long fps) {
-        offScreenGraphics.setColor(Color.WHITE);
-        offScreenGraphics.drawString("FPS: " + fps, 10, 20);
+        gameGraphics.setColor(Color.WHITE);
+        gameGraphics.drawString("FPS: " + fps, 10, 20);
     }
 
-    private void presentBuffer() {
+    private void presentBuffers() {
         Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
-        g.drawImage(offScreenBuffer, 0, 0, null);
+        g.drawImage(gameBuffer, 0, 0, null);
+        g.drawImage(hudBuffer, 0, gameHeight, null);
         g.dispose();
         bufferStrategy.show();
     }
@@ -366,14 +385,18 @@ public class Renderer {
     public void setDimensions(int width, int height) {
         this.width = width;
         this.height = height;
-        HALF_HEIGHT = height / 2;
+        this.gameHeight = (int)(height * 0.8);
+        this.hudHeight = height - gameHeight;
+        HALF_HEIGHT = gameHeight / 2;
 
-        // Reinitialize buffers to match new dimensions
-        this.zBuffer = new double[width];; // Depth buffer should account for both width and height
-        this.offScreenBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        this.offScreenGraphics = offScreenBuffer.createGraphics();
-        clearScreen();
+        this.zBuffer = new double[width];
+        this.gameBuffer = new BufferedImage(width, gameHeight, BufferedImage.TYPE_INT_RGB);
+        this.hudBuffer = new BufferedImage(width, hudHeight, BufferedImage.TYPE_INT_RGB);
+        this.gameGraphics = gameBuffer.createGraphics();
+        this.hudGraphics = hudBuffer.createGraphics();
+        clearBuffers();
     }
+
 
     private static class RaycastHit {
         final double distance;

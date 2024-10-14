@@ -25,7 +25,7 @@ public class Game extends JFrame {
     public Game() {
         setTitle("Potato");
         try {
-            setIconImage(ImageIO.read(this.getClass().getResourceAsStream("icon.png")));
+            setIconImage(ImageIO.read(this.getClass().getResourceAsStream("/potato/sprites/icon.png")));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -34,7 +34,7 @@ public class Game extends JFrame {
         setResizable(false);
 
         player = new Player(1.5, 1.5, 0); // Starting position and angle
-        textures = new Textures("textures.png", 16, 16); // Load textures
+        textures = new Textures("/potato/sprites/textures.png", 16, 16); // Load textures
 
         canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));

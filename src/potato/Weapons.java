@@ -5,8 +5,8 @@ public class Weapons {
 
     static {
         // Parameters: name, damage, fireRate (shots per second), projectileSpeed, GunSprite
-        WEAPON_1 = new Weapon("AR", 1, 500, 5f,
-                new GunSprite("ar.png", 24, 24, 20));
+        WEAPON_1 = new Weapon("pistol", 1, 500, 5f,
+                new GunSprite("/potato/sprites/pistol.png", 48, 48, 20, 5));
     }
 
     // Private constructor to prevent instantiation

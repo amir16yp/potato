@@ -68,7 +68,7 @@ public class DefaultInputHandler implements IInputHandler {
     protected void handleOtherInput(int key) {
         if (key == KeyEvent.VK_X) {
             try {
-                renderer.entities.add(new Entity(Game.player.getX(), Game.player.getY(), ImageIO.read(this.getClass().getResourceAsStream("/Mushie.png")), 0));
+                renderer.entities.add(new Entity(Game.player.getX(), Game.player.getY(), ImageIO.read(this.getClass().getResourceAsStream("/potato/sprites/Mushie.png")), 0));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
