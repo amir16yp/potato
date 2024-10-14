@@ -18,7 +18,7 @@ import static potato.Game.textures;
 
 public class Renderer {
     private static int HALF_HEIGHT;
-    public static final double FOV = Math.toRadians(120);
+    public static final double FOV = Math.toRadians(60);
     public static final double HALF_FOV = FOV / 2;
     public static final double MAX_DISTANCE = 20.0;
     private static final double WALL_HEIGHT = 1.0;
@@ -40,7 +40,7 @@ public class Renderer {
     private SurfaceData surfaceData;
     private BufferedImage buffer;
     private int[] pixels;
-
+    private Component canvas;
     public Renderer(int width, int height, Component canvas, Player player) {
         this.width = width;
         this.height = height;
@@ -48,7 +48,7 @@ public class Renderer {
         this.hudHeight = height - gameHeight;
         HALF_HEIGHT = gameHeight / 2;
         this.player = player;
-
+        this.canvas = canvas;
         this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         this.pixels = ((DataBufferInt) buffer.getRaster().getDataBuffer()).getData();
 
@@ -429,9 +429,36 @@ public class Renderer {
         this.hudHeight = height - gameHeight;
         HALF_HEIGHT = gameHeight / 2;
 
+        // Recreate zBuffer with new width
         this.zBuffer = new double[width];
+
+        // Recreate buffer and pixels array with new dimensions
         this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         this.pixels = ((DataBufferInt) buffer.getRaster().getDataBuffer()).getData();
+
+        // Update or recreate fastGraphics and surfaceData
+        try {
+            if (surfaceData != null) {
+                surfaceData.invalidate();
+            }
+            ComponentPeer peer = canvas.getPeer();
+            if (peer instanceof WComponentPeer) {
+                surfaceData = GDIWindowSurfaceData.createData((WComponentPeer) peer);
+                fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+            } else {
+                throw new RuntimeException("Unsupported peer type for fast rendering");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update fast graphics: " + e.getMessage());
+        }
+
+        // Update player's plane values if they depend on screen dimensions
+        double planeLength = Math.tan(HALF_FOV);
+        player.setPlaneX(-planeLength * Math.sin(player.getAngle()));
+        player.setPlaneY(planeLength * Math.cos(player.getAngle()));
+
+        // Notify any listeners about the dimension change (if implemented)
+        // notifyDimensionChangeListeners(width, height);
     }
 
     private void clearScreen() {

@@ -114,7 +114,7 @@ public class Game extends JFrame {
             for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.postinit();
             }
-            //game.setResolution(800, 600);
+            game.setResolution(800, 600);
         });
     }
 }

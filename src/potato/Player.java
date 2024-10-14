@@ -196,4 +196,13 @@ public class Player {
     public double getPlaneX() {
         return planeX;
     }
+
+    public void setPlaneX(double planeX)
+    {
+        this.planeX = planeX;
+    }
+
+    public void setPlaneY(double planeY) {
+        this.planeY = planeY;
+    }
 }
