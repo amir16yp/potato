@@ -12,7 +12,7 @@ public class Renderer {
     private static int HALF_HEIGHT;
     public static final double FOV = Math.PI / 3;
     public static final double HALF_FOV = FOV / 2;
-    private static final double MAX_DISTANCE = 20.0;
+    public static final double MAX_DISTANCE = 20.0;
     private double weaponBobOffset = 0;
     private static final double WEAPON_BOB_AMOUNT = 5.0;
     private static final double WEAPON_BOB_SPEED = 0.05;
@@ -77,13 +77,33 @@ public class Renderer {
     }
 
     private void drawCeilingAndFloor(Graphics2D g2d) {
+        BufferedImage ceilingTexture = map.getCeilingImage();
+        BufferedImage floorTexture = map.getFloorImage();
+
         for (int y = 0; y < height; y++) {
-            if (y < HALF_HEIGHT) {
-                g2d.setColor(new Color(100, 100, 200)); // Sky color
-            } else {
-                g2d.setColor(new Color(50, 50, 50)); // Floor color
+            for (int x = 0; x < width; x++) {
+                if (y < HALF_HEIGHT) {
+                    // Draw ceiling
+                    if (ceilingTexture != null) {
+                        int texX = x % ceilingTexture.getWidth();
+                        int texY = (y * ceilingTexture.getHeight()) / HALF_HEIGHT;
+                        int color = ceilingTexture.getRGB(texX, texY);
+                        offScreenBuffer.setRGB(x, y, color);
+                    } else {
+                        offScreenBuffer.setRGB(x, y, new Color(100, 100, 200).getRGB());
+                    }
+                } else {
+                    // Draw floor
+                    if (floorTexture != null) {
+                        int texX = x % floorTexture.getWidth();
+                        int texY = ((y - HALF_HEIGHT) * floorTexture.getHeight()) / HALF_HEIGHT;
+                        int color = floorTexture.getRGB(texX, texY);
+                        offScreenBuffer.setRGB(x, y, color);
+                    } else {
+                        offScreenBuffer.setRGB(x, y, new Color(50, 50, 50).getRGB());
+                    }
+                }
             }
-            g2d.drawLine(0, y, width, y);
         }
     }
 
@@ -161,18 +181,25 @@ public class Renderer {
 
     private void renderEntities(Graphics2D g) {
         for (Entity entity : entities) {
-            double relativeX = entity.getX() - player.getX();
-            double relativeY = entity.getY() - player.getY();
-            double angle = Math.atan2(relativeY, relativeX) - player.getAngle();
-            double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+            if (entity.isVisibleToPlayer(player, map)) {
+                double relativeX = entity.getX() - player.getX();
+                double relativeY = entity.getY() - player.getY();
+                double angle = Math.atan2(relativeY, relativeX);
+                double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
 
-            if (Math.abs(angle) < HALF_FOV) {
-                int screenX = (int) ((angle + HALF_FOV) / FOV * width);
-                int screenY = height / 2;
-                int spriteSize = (int) (height / distance);
+                // Normalize the angle difference to be between -PI and PI
+                double angleDiff = angle - player.getAngle();
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
-                BufferedImage sprite = entity.getSprite();
-                drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
+                if (Math.abs(angleDiff) < HALF_FOV || distance < 0.5) {  // Include close entities
+                    int screenX = (int) ((angleDiff + HALF_FOV) / FOV * width);
+                    int screenY = height / 2;
+                    int spriteSize = (int) (height / (distance + 0.1));  // Avoid division by zero
+
+                    BufferedImage sprite = entity.getSprite();
+                    drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
+                }
             }
         }
     }
@@ -189,10 +216,14 @@ public class Renderer {
             if (distance >= zBuffer[x]) continue;
 
             int texX = (x - startX) * sprite.getWidth() / spriteSize;
+            texX = Math.max(0, Math.min(texX, sprite.getWidth() - 1));  // Clamp texX
+
             for (int y = startY; y < endY; y++) {
                 if (y < 0 || y >= height) continue;
 
                 int texY = (y - startY) * sprite.getHeight() / spriteSize;
+                texY = Math.max(0, Math.min(texY, sprite.getHeight() - 1));  // Clamp texY
+
                 int color = sprite.getRGB(texX, texY);
 
                 if ((color & 0xFF000000) != 0) {
@@ -207,19 +238,25 @@ public class Renderer {
         for (Projectile projectile : player.getProjectiles()) {
             double relativeX = projectile.getX() - player.getX();
             double relativeY = projectile.getY() - player.getY();
-            double angle = Math.atan2(relativeY, relativeX) - player.getAngle();
+            double angle = Math.atan2(relativeY, relativeX);
             double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
 
-            if (Math.abs(angle) < HALF_FOV) {
-                int screenX = (int) ((angle + HALF_FOV) / FOV * width);
+            // Normalize the angle difference to be between -PI and PI
+            double angleDiff = angle - player.getAngle();
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+            if (Math.abs(angleDiff) < HALF_FOV || distance < 0.5) {  // Include close projectiles
+                int screenX = (int) ((angleDiff + HALF_FOV) / FOV * width);
                 int screenY = height / 2;
-                int spriteSize = (int) (height / distance);
+                int spriteSize = (int) (height / (distance + 0.1));  // Avoid division by zero
 
                 BufferedImage sprite = projectile.getSprite();
                 drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
             }
         }
     }
+
 
     private void renderWeapon(Graphics2D g) {
         if (player.getWeapon() == null) {

@@ -20,10 +20,10 @@ public class Entity {
         this.active = true;
     }
 
-    public void update(float deltaTime, Map map, Player player) {
+    public void update() {
         if (!active) return;
         // Update angle to face the player
-        updateAngleToFacePlayer(player);
+        updateAngleToFacePlayer(Game.player);
         // Override this method in subclasses to implement entity-specific behavior
     }
 
@@ -31,48 +31,6 @@ public class Entity {
         double dx = player.getX() - this.x;
         double dy = player.getY() - this.y;
         this.angle = Math.atan2(dy, dx);
-    }
-
-
-    public void render(Graphics2D g, Player player, int screenWidth, int screenHeight) {
-        if (!active || sprite == null) return;
-
-        double relativeX = x - player.getX();
-        double relativeY = y - player.getY();
-
-        double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-        double angleToEntity = Math.atan2(relativeY, relativeX) - player.getAngle();
-
-        // Normalize angle
-        angleToEntity = normalizeAngle(angleToEntity);
-
-        // Check if entity is in field of view
-        if (Math.abs(angleToEntity) > Renderer.HALF_FOV) return;
-
-        // Calculate screen position
-        int screenX = (int) ((angleToEntity / Renderer.FOV + 0.5) * screenWidth);
-        int screenY = screenHeight / 2;
-
-        // Calculate sprite size based on distance
-        double spriteSize = (screenHeight / distance) * (sprite.getWidth() / (double)sprite.getHeight());
-        int spriteWidth = (int) spriteSize;
-        int spriteHeight = (int) spriteSize;
-
-        // Calculate drawing coordinates
-        int drawX = screenX - spriteWidth / 2;
-        int drawY = screenY - spriteHeight / 2;
-
-        // Ensure we're drawing the entire sprite
-        g.drawImage(sprite,
-                drawX, drawY,
-                drawX + spriteWidth, drawY + spriteHeight,
-                0, 0,
-                sprite.getWidth(), sprite.getHeight(),
-                null);
-
-        // Optional: Add outline for debugging
-        g.setColor(Color.RED);
-        g.drawRect(drawX, drawY, spriteWidth, spriteHeight);
     }
 
     private double normalizeAngle(double angle) {
@@ -83,6 +41,40 @@ public class Entity {
             angle += 2 * Math.PI;
         }
         return angle;
+    }
+
+    public boolean isVisibleToPlayer(Player player, Map map) {
+        double dx = this.x - player.getX();
+        double dy = this.y - player.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Check if the entity is within rendering distance
+        if (distance > Renderer.MAX_DISTANCE) {
+            return false;
+        }
+
+        // Check if the entity is within the player's field of view
+        double angleDiff = Math.abs(normalizeAngle(Math.atan2(dy, dx) - player.getAngle()));
+        if (angleDiff > Renderer.HALF_FOV && distance > 0.5) {
+            return false;
+        }
+
+        // Perform a simple ray cast to check for obstacles
+        double step = 0.1; // Adjust this value for precision vs performance
+        double rayX = player.getX();
+        double rayY = player.getY();
+        double rayAngle = Math.atan2(dy, dx);
+
+        for (double d = 0; d < distance; d += step) {
+            rayX += Math.cos(rayAngle) * step;
+            rayY += Math.sin(rayAngle) * step;
+
+            if (map.isWall((int)rayX, (int)rayY)) {
+                return false; // Hit a wall before reaching the entity
+            }
+        }
+
+        return true; // No obstacles found
     }
 
     // Getter and setter methods...

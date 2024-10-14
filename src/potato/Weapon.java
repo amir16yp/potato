@@ -8,6 +8,8 @@ public class Weapon {
     private float currentCooldown; // Current time until next shot
     private GunSprite gunSprite;
 
+    protected Logger logger = new Logger(this.getClass().getName());
+
     public Weapon(String name, int damage, float cooldownTime, float projectileSpeed, GunSprite gunSprite) {
         this.name = name;
         this.damage = damage;

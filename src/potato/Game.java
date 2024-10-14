@@ -47,10 +47,10 @@ public class Game extends JFrame {
     }
 
     public void update() {
-        player.update(inputHandler, renderer.getMap());
+        player.update();
         for (Entity entity : Game.renderer.entities)
         {
-            entity.update(gameLoop.getDeltaTime(), renderer.getMap(), player);
+            entity.update();
         }
     }
 

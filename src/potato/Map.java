@@ -10,8 +10,17 @@ public class Map {
     private final int minRoomSize = 5;
     private final int maxRoomSize = 15;
     protected final Random random;
-    protected BufferedImage floorImage = Game.textures.getTile(5);
-    protected BufferedImage ceilingImage = Game.textures.getTile(5);
+    protected BufferedImage floorImage;
+    protected BufferedImage ceilingImage;
+    protected Logger logger = new Logger(this.getClass().getName());
+
+    public BufferedImage getCeilingImage() {
+        return ceilingImage;
+    }
+
+    public BufferedImage getFloorImage() {
+        return floorImage;
+    }
 
     public Map(int width, int height, long seed) {
         this.width = width;
@@ -75,10 +84,14 @@ public class Map {
 
     public boolean isWall(int x, int y) {
         if (x < 0 || x >= width || y < 0 || y >= height) {
-            return true; // Treat out-of-bounds as walls
+            logger.Log("Out of bounds wall check: " + x + "," + y);
+            return true; // Treat out of bounds as walls
         }
-        return map[y][x] >= 1;
+        boolean wall = map[y][x] >= 1;
+        //logger.Log("Wall check at " + x + "," + y + ": " + (wall ? "is wall" : "is not wall"));
+        return wall;
     }
+
 
     public BufferedImage getTexture(int x, int y)
     {

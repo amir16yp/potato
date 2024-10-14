@@ -1,5 +1,7 @@
 package potato;
 
+import jdk.internal.util.xml.impl.Input;
+
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Player {
@@ -25,22 +27,21 @@ public class Player {
         this.weapon = Weapons.WEAPON_1;
     }
 
-    public void update(InputHandler inputHandler, Map map) {
-        float deltaTime = Game.gameLoop.getDeltaTime();
-        float deltaTimeMillis = Game.gameLoop.getDeltaTimeMillis();
-
-        handleMovement(inputHandler, deltaTime, map);
-        handleRotation(inputHandler, deltaTime);
-        handleWeapon(inputHandler, deltaTimeMillis);
-        updateProjectiles(deltaTime, map);
+    public void update() {
+        handleMovement();
+        handleRotation();
+        handleWeapon();
+        updateProjectiles();
     }
 
-    private void handleMovement(InputHandler inputHandler, float deltaTime, Map map) {
+    private void handleMovement() {
+        Map map = Game.renderer.getMap();
         if (map == null)
         {
             return;
         }
-        double moveDistance = moveSpeed * deltaTime;
+        InputHandler inputHandler = Game.inputHandler;
+        double moveDistance = moveSpeed * Game.gameLoop.getDeltaTime();
         double dx = 0, dy = 0;
 
         if (inputHandler.isMovingForward()) {
@@ -68,33 +69,36 @@ public class Player {
         }
     }
 
-    private void handleRotation(InputHandler inputHandler, float deltaTime) {
+    private void handleRotation() {
+        InputHandler inputHandler = Game.inputHandler;
         if (inputHandler.isRotatingLeft()) {
-            angle -= rotateSpeed * deltaTime;
+            angle -= rotateSpeed * Game.gameLoop.getDeltaTime();
         }
         if (inputHandler.isRotatingRight()) {
-            angle += rotateSpeed * deltaTime;
+            angle += rotateSpeed * Game.gameLoop.getDeltaTime();
         }
         // Normalize angle
         angle = (angle + 2 * Math.PI) % (2 * Math.PI);
     }
 
-    private void handleWeapon(InputHandler inputHandler, float deltaTimeMillis) {
+    private void handleWeapon() {
         if (weapon != null) {
-            weapon.update(deltaTimeMillis);
+            InputHandler inputHandler = Game.inputHandler;
+            weapon.update(Game.gameLoop.getDeltaTimeMillis());
             if (inputHandler.isFiring() && weapon.canFire()) {
-                Projectile projectile = weapon.fire(x, y, angle);
-                if (projectile != null) {
-                    projectiles.add(projectile);
-                }
+                // Adjust the initial position to be slightly in front of the player
+                double projectileX = x + Math.cos(angle) * 0.5;
+                double projectileY = y + Math.sin(angle) * 0.5;
+                Projectile projectile = weapon.fire(projectileX, projectileY, angle);
+                projectiles.add(projectile);
             }
         }
     }
 
-    private void updateProjectiles(float deltaTime, Map map) {
+    private void updateProjectiles() {
         for (Projectile projectile : projectiles) {
-            projectile.update(deltaTime, map);
-            if (map.isWall((int) projectile.getX(), (int) projectile.getY())) {
+            projectile.update();
+            if (!projectile.isActive()) {
                 projectiles.remove(projectile);
             }
         }
