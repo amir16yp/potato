@@ -7,6 +7,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Player {
     private double x;
     private double y;
+    private double planeX;
+    private double planeY;
     private double angle;
     private double moveSpeed;
     private double rotateSpeed;
@@ -25,6 +27,8 @@ public class Player {
         this.projectiles = new CopyOnWriteArrayList<>();
         // Initialize with a default weapon
         this.weapon = Weapons.WEAPON_1;
+        this.planeX = Math.cos(angle + Math.PI/2) * 0.66;
+        this.planeY = Math.sin(angle + Math.PI/2) * 0.66;
     }
 
     public void update() {
@@ -71,14 +75,24 @@ public class Player {
 
     private void handleRotation() {
         InputHandler inputHandler = Game.inputHandler;
+        double rotationAmount = 0;
         if (inputHandler.isRotatingLeft()) {
-            angle -= rotateSpeed * Game.gameLoop.getDeltaTime();
+            rotationAmount = -rotateSpeed * Game.gameLoop.getDeltaTime();
         }
         if (inputHandler.isRotatingRight()) {
-            angle += rotateSpeed * Game.gameLoop.getDeltaTime();
+            rotationAmount = rotateSpeed * Game.gameLoop.getDeltaTime();
         }
-        // Normalize angle
-        angle = (angle + 2 * Math.PI) % (2 * Math.PI);
+
+        if (rotationAmount != 0) {
+            // Rotate the player
+            angle += rotationAmount;
+            angle = (angle + 2 * Math.PI) % (2 * Math.PI);
+
+            // Rotate the camera plane
+            double oldPlaneX = planeX;
+            planeX = planeX * Math.cos(rotationAmount) - planeY * Math.sin(rotationAmount);
+            planeY = oldPlaneX * Math.sin(rotationAmount) + planeY * Math.cos(rotationAmount);
+        }
     }
 
     private void handleWeapon() {
@@ -133,5 +147,13 @@ public class Player {
         InputHandler inputHandler = Game.inputHandler;
         return inputHandler.isMovingForward() || inputHandler.isMovingBackward() ||
                 inputHandler.isStrafingLeft() || inputHandler.isStrafingRight();
+    }
+
+    public double getPlaneY() {
+        return planeY;
+    }
+
+    public double getPlaneX() {
+        return planeX;
     }
 }

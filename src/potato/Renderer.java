@@ -1,26 +1,22 @@
 package potato;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Renderer {
     private static int HALF_HEIGHT;
-    public static final double FOV = Math.PI / 3;
+    public static final double FOV = Math.toRadians(120);
     public static final double HALF_FOV = FOV / 2;
     public static final double MAX_DISTANCE = 20.0;
-    private double weaponBobOffset = 0;
-    private static final double WEAPON_BOB_AMOUNT = 5.0;
-    private static final double WEAPON_BOB_SPEED = 0.05;
+    private static final double WALL_HEIGHT = 1.0;
+    private static final double EPSILON = 1e-4;
 
     private final int width;
     private final int height;
     private final BufferStrategy bufferStrategy;
-    private Map map = null;
+    private Map map;
     private final Player player;
     public final CopyOnWriteArrayList<Entity> entities = new CopyOnWriteArrayList<>();
     private final Textures textures;
@@ -43,131 +39,217 @@ public class Renderer {
     }
 
     public void render(long fps) {
+        clearScreen();
+        if (map == null) {
+            map = new Map(64, 64, 123);
+        }
+        drawCeilingAndFloor();
+        castRays();
+        renderEntities();
+        renderWeapon();
+        drawFPS(fps);
+        presentBuffer();
+    }
+
+    private void clearScreen() {
         offScreenGraphics.setColor(Color.BLACK);
         offScreenGraphics.fillRect(0, 0, width, height);
-
-        renderGame(offScreenGraphics, fps);
-
-        Graphics2D g2d = (Graphics2D) bufferStrategy.getDrawGraphics();
-        g2d.drawImage(offScreenBuffer, 0, 0, null);
-        g2d.dispose();
-        bufferStrategy.show();
     }
 
-    private void renderGame(Graphics2D g2d, long fps) {
-        if (map == null) {
-            initializeMap();
+    private void renderProjectile()
+    {
+        for (Projectile projectile : this.player.getProjectiles())
+        {
+            if (projectile.isActive())
+            {
+                drawProjectile(projectile);
+            } else {
+                this.player.getProjectiles().remove(projectile);
+            }
         }
+    }
 
-        for (int i = 0; i < width; i++) {
-            zBuffer[i] = Double.MAX_VALUE;
+    private void drawProjectile(Projectile projectile) {
+        double dx = projectile.getX() - player.getX();
+        double dy = projectile.getY() - player.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Calculate the angle between player's view and the projectile
+        double angle = Math.atan2(dy, dx) - player.getAngle();
+
+        // Normalize the angle
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+
+        // Check if the projectile is in the player's field of view
+        if (Math.abs(angle) > HALF_FOV) return;
+
+        // Calculate the projectile's position on screen
+        int screenX = (int) ((angle / HALF_FOV + 1) * width / 2);
+
+        // Calculate the projectile's size based on distance
+        double size = (height / distance) * projectile.getSize();
+        int halfSize = (int) (size / 2);
+
+        // Calculate the vertical position (center of screen)
+        int screenY = height / 2;
+
+        // Get the projectile's sprite
+        BufferedImage sprite = projectile.getSprite();
+
+        // Draw the projectile
+        for (int x = -halfSize; x < halfSize; x++) {
+            if (screenX + x < 0 || screenX + x >= width) continue;
+            if (distance > zBuffer[screenX + x]) continue;
+
+            for (int y = -halfSize; y < halfSize; y++) {
+                int drawY = screenY + y;
+                if (drawY < 0 || drawY >= height) continue;
+
+                int texX = (x + halfSize) * sprite.getWidth() / (int)size;
+                int texY = (y + halfSize) * sprite.getHeight() / (int)size;
+
+                int color = sprite.getRGB(texX, texY);
+
+                // Check if the pixel is not transparent
+                if ((color & 0xFF000000) != 0) {
+                    // Apply distance shading
+                    color = applyShading(color, distance);
+                    offScreenBuffer.setRGB(screenX + x, drawY, color);
+                }
+            }
         }
-
-        drawCeilingAndFloor(g2d);
-        castRays(g2d);
-        renderEntities(g2d);
-        renderProjectiles(g2d);
-        renderWeapon(g2d);
-        drawFPS(g2d, fps);
     }
 
-    private void initializeMap() {
-        // Initialize the map with a default size or load from a file
-        map = new Map(100, 100, new Random().nextLong()); // Adjust size as needed
-    }
-
-    private void drawCeilingAndFloor(Graphics2D g2d) {
-        BufferedImage ceilingTexture = map.getCeilingImage();
-        BufferedImage floorTexture = map.getFloorImage();
-
+    private void drawCeilingAndFloor() {
         for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                if (y < HALF_HEIGHT) {
-                    // Draw ceiling
-                    if (ceilingTexture != null) {
-                        int texX = x % ceilingTexture.getWidth();
-                        int texY = (y * ceilingTexture.getHeight()) / HALF_HEIGHT;
-                        int color = ceilingTexture.getRGB(texX, texY);
-                        offScreenBuffer.setRGB(x, y, color);
-                    } else {
-                        offScreenBuffer.setRGB(x, y, new Color(100, 100, 200).getRGB());
-                    }
+            if (y < HALF_HEIGHT) {
+                drawHorizontalLine(y, Color.CYAN);
+            } else {
+                drawHorizontalLine(y, Color.DARK_GRAY);
+            }
+        }
+    }
+
+    private void drawHorizontalLine(int y, Color color) {
+        for (int x = 0; x < width; x++) {
+            offScreenBuffer.setRGB(x, y, color.getRGB());
+        }
+    }
+
+    private void castRays() {
+        double playerX = player.getX();
+        double playerY = player.getY();
+        double playerAngle = player.getAngle();
+
+        for (int x = 0; x < width; x++) {
+            double cameraX = 2 * x / (double) width - 1;
+            double rayDirX = Math.cos(playerAngle) + player.getPlaneX() * cameraX;
+            double rayDirY = Math.sin(playerAngle) + player.getPlaneY() * cameraX;
+
+            RaycastHit hit = castRay(playerX, playerY, rayDirX, rayDirY);
+
+            if (hit != null) {
+                drawWallSlice(x, hit, rayDirX, rayDirY);
+                zBuffer[x] = hit.distance;
+            }
+        }
+    }
+
+    private RaycastHit castRay(double startX, double startY, double dirX, double dirY) {
+        double deltaDistX = Math.abs(1 / dirX);
+        double deltaDistY = Math.abs(1 / dirY);
+
+        int mapX = (int) startX;
+        int mapY = (int) startY;
+
+        double sideDistX, sideDistY;
+        int stepX, stepY;
+
+        if (dirX < 0) {
+            stepX = -1;
+            sideDistX = (startX - mapX) * deltaDistX;
+        } else {
+            stepX = 1;
+            sideDistX = (mapX + 1.0 - startX) * deltaDistX;
+        }
+        if (dirY < 0) {
+            stepY = -1;
+            sideDistY = (startY - mapY) * deltaDistY;
+        } else {
+            stepY = 1;
+            sideDistY = (mapY + 1.0 - startY) * deltaDistY;
+        }
+
+        boolean hit = false;
+        boolean side = false;
+        double perpWallDist = 0;
+
+        while (!hit && perpWallDist < MAX_DISTANCE) {
+            if (sideDistX < sideDistY) {
+                sideDistX += deltaDistX;
+                mapX += stepX;
+                side = false;
+            } else {
+                sideDistY += deltaDistY;
+                mapY += stepY;
+                side = true;
+            }
+
+            if (map.isWall(mapX, mapY)) {
+                hit = true;
+                if (side) {
+                    perpWallDist = (mapY - startY + (1 - stepY) / 2) / dirY;
                 } else {
-                    // Draw floor
-                    if (floorTexture != null) {
-                        int texX = x % floorTexture.getWidth();
-                        int texY = ((y - HALF_HEIGHT) * floorTexture.getHeight()) / HALF_HEIGHT;
-                        int color = floorTexture.getRGB(texX, texY);
-                        offScreenBuffer.setRGB(x, y, color);
-                    } else {
-                        offScreenBuffer.setRGB(x, y, new Color(50, 50, 50).getRGB());
-                    }
+                    perpWallDist = (mapX - startX + (1 - stepX) / 2) / dirX;
                 }
             }
         }
-    }
 
-    private void castRays(Graphics2D g) {
-        double startAngle = player.getAngle() - HALF_FOV;
-        for (int ray = 0; ray < width; ray++) {
-            double angle = startAngle + (ray / (double) width) * FOV;
-            double sinA = Math.sin(angle);
-            double cosA = Math.cos(angle);
-            double x = player.getX();
-            double y = player.getY();
 
-            if (Math.abs(angle - player.getAngle()) > HALF_FOV) continue;
-
-            for (double distance = 0; distance < MAX_DISTANCE; distance += 0.1) {
-                x += 0.1 * cosA;
-                y += 0.1 * sinA;
-                int mapX = (int) x;
-                int mapY = (int) y;
-
-                if (mapX < 0 || mapX >= map.getWidth() || mapY < 0 || mapY >= map.getHeight()) {
-                    break;
-                }
-
-                if (map.isWall(mapX, mapY)) {
-                    distance *= Math.cos(player.getAngle() - angle);
-                    int wallHeight = Math.min((int) (height / distance), height);
-
-                    BufferedImage tileTexture = map.getTexture(mapX, mapY);
-                    if (tileTexture == null) {
-                        break;
-                    }
-
-                    double wallX = (Math.abs(y - Math.floor(y)) < Math.abs(x - Math.floor(x))) ? y % 1 : x % 1;
-                    int textureX = (int)(wallX * tileTexture.getWidth());
-                    textureX = Math.max(0, Math.min(textureX, tileTexture.getWidth() - 1));
-
-                    if (distance < zBuffer[ray]) {
-                        zBuffer[ray] = distance;
-                        drawWallSlice(g, ray, wallHeight, tileTexture, textureX, distance);
-                    }
-                    break;
-                }
+        if (hit) {
+            double wallX;
+            if (side) {
+                wallX = startX + perpWallDist * dirX;
+            } else {
+                wallX = startY + perpWallDist * dirY;
             }
+            wallX -= Math.floor(wallX);
+
+            // Adjust wallX for edge cases
+            if (wallX < EPSILON || wallX > 1 - EPSILON) {
+                wallX = EPSILON;
+            }
+
+            return new RaycastHit(perpWallDist, wallX, map.getTileID(mapX, mapY), side);
         }
+
+        return null;
     }
 
-    private void drawWallSlice(Graphics2D g, int ray, int wallHeight, BufferedImage texture, int textureX, double distance) {
-        int startY = HALF_HEIGHT - wallHeight / 2;
-        int endY = startY + wallHeight;
+    private void drawWallSlice(int x, RaycastHit hit, double rayDirX, double rayDirY) {
+        int lineHeight = (int) (height / hit.distance);
 
-        for (int y = startY; y < endY; y++) {
-            int textureY = (int) ((y - startY) * texture.getHeight() / wallHeight);
-            textureY = Math.max(0, Math.min(textureY, texture.getHeight() - 1));
+        int drawStart = -lineHeight / 2 + height / 2;
+        if (drawStart < 0) drawStart = 0;
+        int drawEnd = lineHeight / 2 + height / 2;
+        if (drawEnd >= height) drawEnd = height - 1;
 
-            int color;
-            try {
-                color = texture.getRGB(textureX, textureY);
-            } catch (ArrayIndexOutOfBoundsException e) {
-                color = Color.MAGENTA.getRGB();
-            }
+        BufferedImage texture = textures.getTile(hit.tileID);
+        int texX = (int) (hit.wallX * texture.getWidth());
+        if ((!hit.side && rayDirX > 0) || (hit.side && rayDirY < 0)) {
+            texX = texture.getWidth() - texX - 1;
+        }
 
-            color = applyShading(color, distance);
-            offScreenBuffer.setRGB(ray, y, color);
+        double step = 1.0 * texture.getHeight() / lineHeight;
+        double texPos = (drawStart - height / 2 + lineHeight / 2) * step;
+
+        for (int y = drawStart; y < drawEnd; y++) {
+            int texY = (int) texPos & (texture.getHeight() - 1);
+            texPos += step;
+            int color = texture.getRGB(texX, texY);
+            color = applyShading(color, hit.distance);
+            offScreenBuffer.setRGB(x, y, color);
         }
     }
 
@@ -179,52 +261,49 @@ public class Renderer {
         return (r << 16) | (g << 8) | b;
     }
 
-    private void renderEntities(Graphics2D g) {
+    private void renderEntities() {
         for (Entity entity : entities) {
-            if (entity.isVisibleToPlayer(player, map)) {
-                double relativeX = entity.getX() - player.getX();
-                double relativeY = entity.getY() - player.getY();
-                double angle = Math.atan2(relativeY, relativeX);
-                double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-
-                // Normalize the angle difference to be between -PI and PI
-                double angleDiff = angle - player.getAngle();
-                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-                if (Math.abs(angleDiff) < HALF_FOV || distance < 0.5) {  // Include close entities
-                    int screenX = (int) ((angleDiff + HALF_FOV) / FOV * width);
-                    int screenY = height / 2;
-                    int spriteSize = (int) (height / (distance + 0.1));  // Avoid division by zero
-
-                    BufferedImage sprite = entity.getSprite();
-                    drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
-                }
+            if (isEntityVisible(entity)) {
+                renderEntity(entity);
             }
         }
     }
 
-    private void drawSprite(Graphics2D g, BufferedImage sprite, int screenX, int screenY, int spriteSize, double distance) {
-        int halfSize = spriteSize / 2;
-        int startX = screenX - halfSize;
-        int endX = screenX + halfSize;
-        int startY = screenY - halfSize;
-        int endY = screenY + halfSize;
+    private boolean isEntityVisible(Entity entity) {
+        double dx = entity.getX() - player.getX();
+        double dy = entity.getY() - player.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        double angle = Math.atan2(dy, dx) - player.getAngle();
+        return Math.abs(angle) < HALF_FOV || distance < 0.5;
+    }
 
-        for (int x = startX; x < endX; x++) {
-            if (x < 0 || x >= width) continue;
-            if (distance >= zBuffer[x]) continue;
+    private void renderEntity(Entity entity) {
+        double dx = entity.getX() - player.getX();
+        double dy = entity.getY() - player.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        double angle = Math.atan2(dy, dx) - player.getAngle();
 
-            int texX = (x - startX) * sprite.getWidth() / spriteSize;
-            texX = Math.max(0, Math.min(texX, sprite.getWidth() - 1));  // Clamp texX
+        int screenX = (int) ((angle + HALF_FOV) / FOV * width);
+        int screenY = height / 2;
+        int spriteSize = (int) (height / distance);
 
-            for (int y = startY; y < endY; y++) {
+        BufferedImage sprite = entity.getSprite();
+        drawSprite(sprite, screenX, screenY, spriteSize, distance);
+    }
+
+    private void drawSprite(BufferedImage sprite, int screenX, int screenY, int size, double distance) {
+        int halfSize = size / 2;
+        for (int sx = -halfSize; sx < halfSize; sx++) {
+            int x = screenX + sx;
+            if (x < 0 || x >= width || distance >= zBuffer[x]) continue;
+
+            for (int sy = -halfSize; sy < halfSize; sy++) {
+                int y = screenY + sy;
                 if (y < 0 || y >= height) continue;
 
-                int texY = (y - startY) * sprite.getHeight() / spriteSize;
-                texY = Math.max(0, Math.min(texY, sprite.getHeight() - 1));  // Clamp texY
-
-                int color = sprite.getRGB(texX, texY);
+                int textureX = (sx + halfSize) * sprite.getWidth() / size;
+                int textureY = (sy + halfSize) * sprite.getHeight() / size;
+                int color = sprite.getRGB(textureX, textureY);
 
                 if ((color & 0xFF000000) != 0) {
                     color = applyShading(color, distance);
@@ -234,67 +313,41 @@ public class Renderer {
         }
     }
 
-    private void renderProjectiles(Graphics2D g) {
-        for (Projectile projectile : player.getProjectiles()) {
-            double relativeX = projectile.getX() - player.getX();
-            double relativeY = projectile.getY() - player.getY();
-            double angle = Math.atan2(relativeY, relativeX);
-            double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
-
-            // Normalize the angle difference to be between -PI and PI
-            double angleDiff = angle - player.getAngle();
-            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-            if (Math.abs(angleDiff) < HALF_FOV || distance < 0.5) {  // Include close projectiles
-                int screenX = (int) ((angleDiff + HALF_FOV) / FOV * width);
-                int screenY = height / 2;
-                int spriteSize = (int) (height / (distance + 0.1));  // Avoid division by zero
-
-                BufferedImage sprite = projectile.getSprite();
-                drawSprite(g, sprite, screenX, screenY, spriteSize, distance);
-            }
-        }
+    private void renderWeapon() {
+        // Implement weapon rendering here
     }
 
-
-    private void renderWeapon(Graphics2D g) {
-        if (player.getWeapon() == null) {
-            return;
-        }
-        BufferedImage weaponTexture = player.getWeapon().getGunSprite().getCurrentFrame();
-        int weaponWidth = weaponTexture.getWidth() * 3;
-        int weaponHeight = weaponTexture.getHeight() * 3;
-
-        int x = (width - weaponWidth) / 2;
-        int y = height - weaponHeight;
-
-        if (player.isMoving()) {
-            weaponBobOffset += WEAPON_BOB_SPEED;
-            if (weaponBobOffset > Math.PI * 2) {
-                weaponBobOffset -= Math.PI * 2;
-            }
-        } else {
-            weaponBobOffset *= 0.8;
-        }
-
-        double bobY = Math.sin(weaponBobOffset) * WEAPON_BOB_AMOUNT;
-        double bobX = Math.cos(weaponBobOffset * 0.5) * WEAPON_BOB_AMOUNT * 0.5;
-
-        g.drawImage(weaponTexture,
-                (int)(x + bobX),
-                (int)(y + bobY),
-                weaponWidth,
-                weaponHeight,
-                null);
+    private void drawFPS(long fps) {
+        offScreenGraphics.setColor(Color.WHITE);
+        offScreenGraphics.drawString("FPS: " + fps, 10, 20);
     }
 
-    private void drawFPS(Graphics g, long fps) {
-        g.setColor(Color.WHITE);
-        g.drawString("FPS: " + fps, 10, 20);
+    private void presentBuffer() {
+        Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
+        g.drawImage(offScreenBuffer, 0, 0, null);
+        g.dispose();
+        bufferStrategy.show();
     }
 
     public Map getMap() {
         return map;
+    }
+
+    public void setMap(Map map) {
+        this.map = map;
+    }
+
+    private static class RaycastHit {
+        final double distance;
+        final double wallX;
+        final int tileID;
+        final boolean side;
+
+        RaycastHit(double distance, double wallX, int tileID, boolean side) {
+            this.distance = distance;
+            this.wallX = wallX;
+            this.tileID = tileID;
+            this.side = side;
+        }
     }
 }

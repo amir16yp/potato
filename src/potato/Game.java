@@ -5,8 +5,8 @@ import java.awt.*;
 import java.awt.image.BufferStrategy;
 
 public class Game extends JFrame {
-    private static final int WIDTH = 800;
-    private static final int HEIGHT = 600;
+    public static final int WIDTH = 640;
+    public static final int HEIGHT = 480;
 
     public static Renderer renderer;
     public static Player player;
@@ -21,7 +21,7 @@ public class Game extends JFrame {
         setResizable(false);
 
         player = new Player(1.5, 1.5, 0); // Starting position and angle
-        textures = new Textures("textures.png", 32, 32); // Load textures
+        textures = new Textures("textures.png", 16, 16); // Load textures
 
         Canvas canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));;

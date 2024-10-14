@@ -11,6 +11,7 @@ public class Projectile {
     private BufferedImage sprite;
     private boolean active;
     protected Logger logger = new Logger(this.getClass().getName());
+    private double size;
 
     private static final double COLLISION_THRESHOLD = 0.1;
 
@@ -22,6 +23,7 @@ public class Projectile {
         this.damage = damage;
         this.sprite = sprite;
         this.active = true;
+        this.size = 32;
         logger.Log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 
@@ -39,19 +41,44 @@ public class Projectile {
             x = newX;
             y = newY;
         } else {
-            deactivate();
+            deactivate("wall");
         }
 
         for (Entity entity : Game.renderer.entities)
         {
-
+            if (checkEntityCollision(entity))
+            {
+                entity.takeDamage(this.damage);
+                deactivate("entity");
+            }
         }
 
         // Deactivate if out of bounds
         if (x < 0 || x >= Game.renderer.getMap().getWidth() || y < 0 || y >= Game.renderer.getMap().getHeight()) {
-            deactivate();
+            deactivate("out of bounds");
         }
     }
+
+
+    private boolean checkEntityCollision(Entity entity) {
+        double[] entityHitbox = entity.getHitbox();
+
+        // Calculate projectile's screen position
+        double relativeX = x - Game.player.getX();
+        double relativeY = y - Game.player.getY();
+        double angleToProjectile = Math.atan2(relativeY, relativeX) - Game.player.getAngle();
+
+        // Normalize the angle
+        while (angleToProjectile > Math.PI) angleToProjectile -= 2 * Math.PI;
+        while (angleToProjectile < -Math.PI) angleToProjectile += 2 * Math.PI;
+
+        int projectileScreenX = (int) ((angleToProjectile + Renderer.HALF_FOV) / Renderer.FOV * Game.WIDTH);
+        int projectileScreenY = Game.HEIGHT / 2;
+
+        return (projectileScreenX >= entityHitbox[0] && projectileScreenX <= entityHitbox[2] &&
+                projectileScreenY >= entityHitbox[1] && projectileScreenY <= entityHitbox[3]);
+    }
+
 
     private boolean isWall(double x, double y) {
         int mapX = (int) x;
@@ -76,6 +103,12 @@ public class Projectile {
         active = false;
     }
 
+    public void deactivate(String reason)
+    {
+        logger.Log("Deactivated projectile at " + x + "," + y +" : " + reason);
+        active = false;
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -94,5 +127,9 @@ public class Projectile {
 
     public int getDamage() {
         return damage;
+    }
+
+    public double getSize() {
+        return size;
     }
 }

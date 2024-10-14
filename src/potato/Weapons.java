@@ -5,7 +5,7 @@ public class Weapons {
 
     static {
         // Parameters: name, damage, fireRate (shots per second), projectileSpeed, GunSprite
-        WEAPON_1 = new Weapon("AR", 15, 500, 5f,
+        WEAPON_1 = new Weapon("AR", 1, 0, 5f,
                 new GunSprite("ar.png", 24, 24, 20));
     }
 

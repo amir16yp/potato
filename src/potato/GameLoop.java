@@ -19,7 +19,7 @@ public class GameLoop implements Runnable {
     }
 
     public int getTargetFPS() {
-        return 60;
+        return 0;
     }
 
     public float adjustSpeedForFrameRate(float speed) {

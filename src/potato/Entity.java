@@ -10,6 +10,7 @@ public class Entity {
     protected BufferedImage sprite;
     protected boolean active;
     protected double speed;
+    private double health = 100;
 
     public Entity(double x, double y, BufferedImage sprite, double speed) {
         this.x = x;
@@ -18,6 +19,26 @@ public class Entity {
         this.sprite = sprite;
         this.speed = speed;
         this.active = true;
+    }
+
+    public double getHealth() {
+        return health;
+    }
+
+    public void takeDamage(double damage)
+    {
+        this.health -= damage;
+        if (this.health <= 0)
+        {
+            die();
+        }
+        //this.sprite = Renderer.adjustOpacity(this.sprite, (int) health);
+    }
+
+    public void die()
+    {
+        this.health = 0;
+        Game.renderer.entities.remove(this);
     }
 
     public void update() {
@@ -41,6 +62,35 @@ public class Entity {
             angle += 2 * Math.PI;
         }
         return angle;
+    }
+
+    public double[] getHitbox() {
+        Player player = Game.player;
+        double relativeX = x - player.getX();
+        double relativeY = y - player.getY();
+        double distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+
+        // Calculate the angle between the player and the entity
+        double angleToPlayer = Math.atan2(relativeY, relativeX) - player.getAngle();
+
+        // Normalize the angle
+        while (angleToPlayer > Math.PI) angleToPlayer -= 2 * Math.PI;
+        while (angleToPlayer < -Math.PI) angleToPlayer += 2 * Math.PI;
+
+        // Calculate the entity's position on the screen
+        int screenX = (int) ((angleToPlayer + Renderer.HALF_FOV) / Renderer.FOV * Game.WIDTH);
+        int screenY = Game.HEIGHT / 2;
+
+        // Calculate the size of the entity on the screen
+        int spriteSize = (int) (Game.HEIGHT / (distance + 0.1));
+
+        // Calculate hitbox dimensions
+        int hitboxLeft = screenX - spriteSize / 2;
+        int hitboxTop = screenY - spriteSize / 2;
+        int hitboxRight = screenX + spriteSize / 2;
+        int hitboxBottom = screenY + spriteSize / 2;
+
+        return new double[]{hitboxLeft, hitboxTop, hitboxRight, hitboxBottom};
     }
 
     public boolean isVisibleToPlayer(Player player, Map map) {
