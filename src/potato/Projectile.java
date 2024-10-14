@@ -23,7 +23,7 @@ public class Projectile {
         this.damage = damage;
         this.sprite = sprite;
         this.active = true;
-        this.size = 0.1;
+        this.size = 0.2;
         logger.Log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 

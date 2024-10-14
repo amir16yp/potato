@@ -1,8 +1,10 @@
 package potato;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
+import java.io.IOException;
 
 public class Game extends JFrame {
     public static int WIDTH = 640; // Now modifiable
@@ -17,6 +19,11 @@ public class Game extends JFrame {
 
     public Game() {
         setTitle("Potato");
+        try {
+            setIconImage(ImageIO.read(this.getClass().getResourceAsStream("icon.png")));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         setSize(WIDTH, HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
@@ -79,6 +86,7 @@ public class Game extends JFrame {
         SwingUtilities.invokeLater(() -> {
             Game game = new Game();
             game.start();
+            //wwgame.setResolution(800, 600);
         });
     }
 }
