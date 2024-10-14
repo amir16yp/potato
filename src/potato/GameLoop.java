@@ -13,6 +13,7 @@ public class GameLoop implements Runnable {
     private int frameCount = 0;
     private float fpsTimer = 0;
     private long fps = 0;
+    private Thread thread = new Thread(this);
 
     public GameLoop(Game game) {
         this.game = game;
@@ -42,7 +43,10 @@ public class GameLoop implements Runnable {
         if (!running) {
             running = true;
             lastFrameTime = System.nanoTime();
-            new Thread(this).start();
+            if (!thread.isAlive())
+            {
+                thread.start();
+            }
         }
     }
 

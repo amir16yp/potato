@@ -13,13 +13,11 @@ public class SpriteEntity {
     private double size;
     private Runnable onInteractPlayer;
 
-    public void deactivate()
-    {
+    public void deactivate() {
         this.active = false;
     }
 
-    public void setOnInteractPlayer(Runnable action)
-    {
+    public void setOnInteractPlayer(Runnable action) {
         this.onInteractPlayer = action;
     }
 
@@ -31,7 +29,6 @@ public class SpriteEntity {
         this.speed = speed;
         this.active = true;
         this.size = 1;
-
     }
 
     public void render(Renderer renderer, Player player) {
@@ -55,23 +52,23 @@ public class SpriteEntity {
         if (Math.abs(entityAngle) > Renderer.HALF_FOV) return;
 
         // Calculate the screen position based on the angle
-        int screenX = (int) ((entityAngle / Renderer.HALF_FOV + 1) * renderer.getWidth() / 2);
+        int screenX = (int) ((entityAngle / Renderer.HALF_FOV + 1) * renderer.width / 2);
 
         // Calculate the entity's size based on its distance from the player
-        double projectedSize = (renderer.getGameHeight() / distance) * size;
+        double projectedSize = (renderer.gameHeight / distance) * size;
 
         // Adjust vertical position based on distance
-        int screenY = (int) (renderer.getGameHeight() / 2 * (1 + 1 / distance));
+        int screenY = (int) (renderer.gameHeight / 2 * (1 + 1 / distance));
 
         // Draw the entity
-        renderer.drawSprite(sprite, screenX, screenY, (int) projectedSize, distance, Renderer.RenderTarget.GAME);
+        renderer.drawSprite(sprite, screenX, screenY, (int) projectedSize, distance, RenderTarget.GAME);
     }
 
     public void update() {
         if (!active) {
             Game.renderer.entities.remove(this);
             return;
-        };
+        }
         // Update angle to face the player
         updateToPlayer(Game.player);
     }
@@ -80,13 +77,11 @@ public class SpriteEntity {
         double dx = player.getX() - this.x;
         double dy = player.getY() - this.y;
         this.angle = Math.atan2(dy, dx);
-        if (this.onInteractPlayer == null)
-        {
+        if (this.onInteractPlayer == null) {
             return;
         }
         double distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < 2)
-        {
+        if (distance < 2) {
             onInteractPlayer.run();
         }
     }

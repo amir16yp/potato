@@ -19,7 +19,8 @@ public class Game extends JFrame {
     public static Textures textures;
     public static Textures hudTextures;
     public static Textures projectileTextures;
-    public static InputHandler inputHandler = new InputHandler();;
+    public static InputHandler inputHandler = new InputHandler();
+    ;
     public static GameLoop gameLoop;
     public static final ModLoader MOD_LOADER = new ModLoader();
     public Canvas canvas;
@@ -37,8 +38,8 @@ public class Game extends JFrame {
 
         player = new Player(1.5, 1.5, 0); // Starting position and angle
         textures = new Textures("/potato/sprites/textures.png", 16, 16); // Load textures
-        hudTextures = new Textures("/potato/sprites/hud.png", 32,32);
-        projectileTextures = new Textures("/potato/sprites/gun/boolet.png", 32,32);
+        hudTextures = new Textures("/potato/sprites/hud.png", 32, 32);
+        projectileTextures = new Textures("/potato/sprites/gun/boolet.png", 32, 32);
         canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
         add(canvas);
@@ -48,9 +49,9 @@ public class Game extends JFrame {
         setVisible(true);
 
         canvas.createBufferStrategy(2);
-        BufferStrategy bufferStrategy = canvas.getBufferStrategy();
+        //BufferStrategy bufferStrategy = canvas.getBufferStrategy();
 
-        renderer = new Renderer(WIDTH, HEIGHT, bufferStrategy, player);
+        renderer = new Renderer(WIDTH, HEIGHT, canvas, player);
         addKeyListener(inputHandler);
         canvas.addKeyListener(inputHandler);
         gameLoop = new GameLoop(this);
@@ -65,8 +66,7 @@ public class Game extends JFrame {
         for (SpriteEntity spriteEntity : Game.renderer.entities) {
             spriteEntity.update();
         }
-        if (player.getWeapon() == null)
-        {
+        if (player.getWeapon() == null) {
             Renderer.GUN_NAME_TEXT.setText("Unarmed");
             Renderer.GUN_AMMO_TEXT.setText("");
         } else {
@@ -106,14 +106,12 @@ public class Game extends JFrame {
                 mod.preinit();
             }
             Game game = new Game();
-            for (Mod mod : MOD_LOADER.getLoadedMods())
-            {
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.init();
             }
             //game.setResolution(800, 600);
             game.start();
-            for (Mod mod : MOD_LOADER.getLoadedMods())
-            {
+            for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.postinit();
             }
             //game.setResolution(800, 600);
