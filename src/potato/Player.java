@@ -18,6 +18,17 @@ public class Player {
     // Constants for collision detection
     private static final double COLLISION_RADIUS = 0.2;
 
+    public double getHeartCount()
+    {
+        return health / 10;
+    }
+
+    public double getHealth() {
+        return health;
+    }
+
+
+
     public Player(double x, double y, double angle) {
         this.x = x;
         this.y = y;

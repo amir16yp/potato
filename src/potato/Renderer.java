@@ -95,7 +95,7 @@ public class Renderer {
     private void renderHUD()
     {
         int count = player.getProjectiles().size();
-        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).setTextColor(Color.MAGENTA).draw(hudGraphics, 0, 0);
+        new GlyphText("PROJECTILE COUNT " + String.valueOf(count), 2).setTextColor(Color.MAGENTA).draw(hudGraphics, 0, 0);
         // Add more HUD elements here as needed
     }
 
