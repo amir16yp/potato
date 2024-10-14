@@ -50,11 +50,6 @@ public class GlyphText {
             BufferedImage scaledGlyph = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
             Graphics2D gScaled = scaledGlyph.createGraphics();
 
-            // Enable anti-aliasing for smoother scaling
-            gScaled.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            gScaled.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            gScaled.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
             // Draw the scaled glyph
             gScaled.drawImage(glyphImage, 0, 0, scaledWidth, scaledHeight, null);
             gScaled.dispose();

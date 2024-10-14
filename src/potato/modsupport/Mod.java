@@ -7,5 +7,6 @@ public interface Mod {
     void init();
     void postinit();
     void update();
-    void draw(Graphics2D g);
+    void drawHUD(Graphics2D g);
+    void drawGame(Graphics2D g);
 }

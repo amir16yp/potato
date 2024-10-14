@@ -86,7 +86,8 @@ public class Renderer {
         renderHUD();
         drawFPS(Game.gameLoop.getFPS());
         for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
-            mod.draw(gameGraphics);
+            mod.drawGame(gameGraphics);
+            mod.drawHUD(hudGraphics);
         }
         presentBuffers();
     }
@@ -94,7 +95,7 @@ public class Renderer {
     private void renderHUD()
     {
         int count = player.getProjectiles().size();
-        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).setTextColor(Color.YELLOW).draw(hudGraphics, 0, 0);
+        new GlyphText("PROJECTILE COUNT:" + String.valueOf(count), 2).setTextColor(Color.MAGENTA).draw(hudGraphics, 0, 0);
         // Add more HUD elements here as needed
     }
 

@@ -71,12 +71,6 @@ public class ModLoader {
         }
     }
 
-    public void drawMods(Graphics2D graphics2D) {
-        for (Mod mod : loadedMods) {
-            mod.draw(graphics2D);
-        }
-    }
-
     public List<Mod> getLoadedMods() {
         return loadedMods;
     }

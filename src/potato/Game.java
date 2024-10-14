@@ -62,10 +62,7 @@ public class Game extends JFrame {
         for (Entity entity : Game.renderer.entities) {
             entity.update();
         }
-        for (Mod mod : MOD_LOADER.getLoadedMods())
-        {
-            mod.update();
-        }
+        MOD_LOADER.updateMods();
     }
 
     public void render() {
