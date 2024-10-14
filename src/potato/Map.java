@@ -130,10 +130,15 @@ public class Map {
 
     public void printMap() {
         for (int y = 0; y < height; y++) {
+            StringBuilder rowBuilder = new StringBuilder("["); // Start the row with an opening bracket
             for (int x = 0; x < width; x++) {
-                System.out.print(map[y][x] + " ");
+                rowBuilder.append(map[y][x]); // Append the tile ID
+                if (x < width - 1) {
+                    rowBuilder.append(", "); // Add a comma and space if not the last element
+                }
             }
-            System.out.println();
+            rowBuilder.append("]"); // Close the row with a closing bracket
+            logger.Log(rowBuilder.toString()); // Log the formatted row
         }
     }
 

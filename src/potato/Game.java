@@ -36,7 +36,6 @@ public class Game extends JFrame {
         BufferStrategy bufferStrategy = canvas.getBufferStrategy();
 
         renderer = new Renderer(WIDTH, HEIGHT, bufferStrategy, player, textures);
-
         inputHandler = new InputHandler(renderer);
         addKeyListener(inputHandler);
         canvas.addKeyListener(inputHandler);
@@ -80,7 +79,6 @@ public class Game extends JFrame {
         SwingUtilities.invokeLater(() -> {
             Game game = new Game();
             game.start();
-            game.setResolution(640, 480);
         });
     }
 }

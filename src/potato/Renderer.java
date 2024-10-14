@@ -42,7 +42,8 @@ public class Renderer {
     public void render(long fps) {
         clearScreen();
         if (map == null) {
-            map = new Map(64, 64, 123);
+            map = new Map(32, 32, 123);
+            map.printMap();
         }
         drawCeilingAndFloor();
         castRays();
