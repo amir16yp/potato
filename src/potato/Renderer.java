@@ -57,7 +57,7 @@ public class Renderer {
     private int[] pixels;
     private final Component canvas;
 
-    private int clientId = -1; // Initialize with an invalid ID
+    public int clientId = -1; // Initialize with an invalid ID
     private boolean mapReceived = false;
 
     public Renderer(int width, int height, Component canvas, Player player) {
@@ -108,7 +108,7 @@ public class Renderer {
                     clientId = ((ClientIDPacket) packet).getClientId();
                     System.out.println("Received client ID: " + clientId);
                 } else {
-                    System.out.println(packet.getType());
+                    //System.out.println(packet.getType());
                     incomingPackets.offer(packet);
                 }
             }
@@ -139,14 +139,36 @@ public class Renderer {
     private void processServerUpdates() {
         Packet packet;
         while ((packet = incomingPackets.poll()) != null) {
-            if (packet.getType() == PacketType.MAP_DATA) {
-                updateMap((MapDataPacket) packet);
-            } else if (packet.getType() == PacketType.PLAYER_POSITION) {
-                PlayerPositionPacket posPacket = (PlayerPositionPacket) packet;
-                if (posPacket.getClientId() != clientId) {
-                    updateOtherPlayerPosition(posPacket);
-                }
+            switch (packet.getType()) {
+                case MAP_DATA:
+                    updateMap((MapDataPacket) packet);
+                    break;
+                case PLAYER_POSITION:
+                    PlayerPositionPacket posPacket = (PlayerPositionPacket) packet;
+                    if (posPacket.getClientId() != clientId) {
+                        updateOtherPlayerPosition(posPacket);
+                    }
+                    break;
+                case SHOOT_PROJECTILE:
+                    handleShootProjectilePacket((ShootProjectilePacket) packet);
+                    break;
+                default:
+                    System.err.println("Unknown packet type: " + packet.getType());
             }
+        }
+    }
+
+    private void handleShootProjectilePacket(ShootProjectilePacket packet) {
+        if (packet.getClientId() != clientId) {
+            Projectile projectile = new Projectile(
+                    packet.getX(),
+                    packet.getY(),
+                    packet.getAngle(),
+                    packet.getSpeed(),
+                    packet.getDamage(),
+                    packet.getTextureID()
+            );
+            projectiles.add(projectile);
         }
     }
 
@@ -188,7 +210,7 @@ public class Renderer {
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private boolean isMultiplayer;
+    public boolean isMultiplayer;
     private ConcurrentLinkedQueue<Packet> incomingPackets = new ConcurrentLinkedQueue<>();
     private ConcurrentHashMap<Integer, SpriteEntity> otherPlayers = new ConcurrentHashMap<>();
 
@@ -247,42 +269,64 @@ public class Renderer {
         surfaceData = null;
     }
 
-    public void render() {
-        if (!mapReceived && isMultiplayer) {
-            renderWaitingScreen();
-            return;
+        public void render() {
+            if (!mapReceived && isMultiplayer) {
+                renderLoadingScreen("Retrieving map data from server...");
+                return;
+            }
+            if (!isMultiplayer)
+            {
+                map = new Map(32, 32, 123);
+                this.miniMapRenderer = new MiniMapRenderer(map, Game.textures);
+                this.mapReceived = true;
+            }
+
+            clearScreen();
+            drawCeilingAndFloor();
+            castRays();
+            renderEntities();
+            if (this.isMultiplayer)
+            {
+                renderOtherPlayers();
+            }
+            renderWeapon();
+            renderProjectile();
+            renderHUD();
+            for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
+                mod.drawGame(fastGraphics);
+                mod.drawHUD(fastGraphics);
+            }
+            presentBuffer();
         }
 
-        clearScreen();
-        if (map == null) {
-            System.err.println("Map is null. This shouldn't happen after mapReceived is true.");
-            return;
-        }
-
-        drawCeilingAndFloor();
-        castRays();
-        renderEntities();
-        if (this.isMultiplayer)
-        {
-            renderOtherPlayers();
-        }
-        renderWeapon();
-        renderProjectile();
-        renderHUD();
-        for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
-            mod.drawGame(fastGraphics);
-            mod.drawHUD(fastGraphics);
-        }
-        presentBuffer();
-    }
-
-    private void renderWaitingScreen() {
+    private void renderLoadingScreen(String text) 
+    {
         Graphics2D g = buffer.createGraphics();
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, width, height);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Waiting for map data from server...", width/2 - 150, height/2);
+
+        // Draw the loading text
+        GlyphText loadingText = new GlyphText(text, 2);
+        int textWidth = loadingText.getWidth();
+        int textHeight = loadingText.getHeight();
+        int textX = (width - textWidth) / 2;
+        int textY = (height - textHeight) / 2;
+        loadingText.draw(g, textX, textY);
+
+        // Draw a loading bar
+        int barWidth = width / 2;
+        int barHeight = 20;
+        int barX = (width - barWidth) / 2;
+        int barY = textY + textHeight + 20;
+
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(barX, barY, barWidth, barHeight);
+
+        // Animate the loading bar
+        int progress = (int)(System.currentTimeMillis() / 20 % barWidth);
+        g.setColor(Color.GREEN);
+        g.fillRect(barX, barY, progress, barHeight);
+
         g.dispose();
         presentBuffer();
     }
@@ -320,7 +364,9 @@ public class Renderer {
         }
     }
 
-    private void renderHUD() {
+    private void renderHUD() 
+    {
+        if (!mapReceived) {return;}
         Graphics2D g = buffer.createGraphics();
 
         // Draw health
@@ -411,7 +457,9 @@ public class Renderer {
         FPS_TEXT.draw(g, 0, 0);
     }
 
-    private void drawCeilingAndFloor() {
+    private void drawCeilingAndFloor()
+    {
+        if (!mapReceived) { return; }
         Map map = getMap();
         for (int y = 0; y < gameHeight; y++) {
             if (y < HALF_HEIGHT) {

@@ -1,6 +1,7 @@
 package potato;
 
 import potato.input.InputHandler;
+import potato.server.ShootProjectilePacket;
 
 import java.awt.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -127,6 +128,10 @@ public class Player {
                 double projectileX = x + Math.cos(angle) * 0.5;
                 double projectileY = y + Math.sin(angle) * 0.5;
                 Projectile projectile = weapon.fire(projectileX, projectileY, angle, this.weapon.getProjectileTextureID());
+                if (Game.renderer.isMultiplayer && Game.renderer.clientId!= -1) {
+                    ShootProjectilePacket packet = new ShootProjectilePacket(Game.renderer.clientId, x, y, angle, weapon.getProjectileSpeed(), weapon.getDamage(), weapon.getProjectileTextureID());
+                    Game.renderer.sendPacket(packet);
+                }
                 Game.renderer.projectiles.add(projectile);
             }
         }

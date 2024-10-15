@@ -39,13 +39,16 @@ class ClientHandler implements Runnable {
     }
 
     private void handlePacket(Packet packet) {
-        if (packet instanceof PlayerPositionPacket) {
-            PlayerPositionPacket posPacket = (PlayerPositionPacket) packet;
-            // Validate and update player position
-            // Then broadcast to other clients
-            server.broadcast(posPacket, clientId);
+        switch (packet.getType()) {
+            case PLAYER_POSITION:
+                server.broadcast(packet, clientId);
+                break;
+            case SHOOT_PROJECTILE:
+                server.broadcast(packet, clientId);
+                break;
+            default:
+                System.err.println("Unknown packet type from client " + clientId + ": " + packet.getType());
         }
-        // Handle other packet types as needed
     }
 
     public void sendPacket(Packet packet) {
