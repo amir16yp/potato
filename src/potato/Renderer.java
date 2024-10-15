@@ -1,15 +1,14 @@
 package potato;
 
 import potato.modsupport.Mod;
-import sun.awt.windows.WComponentPeer;
 import sun.java2d.SunGraphics2D;
 import sun.java2d.SurfaceData;
-import sun.java2d.windows.GDIWindowSurfaceData;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.peer.ComponentPeer;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -61,18 +60,58 @@ public class Renderer {
     }
 
 
+
     private void initializeFastGraphics(Component canvas) {
+        String os = System.getProperty("os.name").toLowerCase();
         try {
-            ComponentPeer peer = canvas.getPeer();
-            if (peer instanceof WComponentPeer) {
-                surfaceData = GDIWindowSurfaceData.createData((WComponentPeer) peer);
-                fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+            if (os.contains("windows")) {
+                initializeWindowsGraphics(canvas);
+            } else if (os.contains("linux")) {
+                initializeLinuxGraphics(canvas);
             } else {
-                throw new RuntimeException("Unsupported peer type for fast rendering");
+                initializeFallbackGraphics();
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize fast graphics: " + e.getMessage());
+            System.err.println("Failed to initialize fast graphics: " + e.getMessage());
+            initializeFallbackGraphics();
         }
+    }
+
+    private void initializeWindowsGraphics(Component canvas) throws Exception {
+        System.out.println("Init windows graphics");
+        Class<?> peerClass = Class.forName("sun.awt.windows.WComponentPeer");
+        Class<?> surfaceDataClass = Class.forName("sun.java2d.windows.GDIWindowSurfaceData");
+        Method createDataMethod = surfaceDataClass.getMethod("createData", peerClass);
+
+        Object peer = canvas.getPeer();
+        if (peerClass.isInstance(peer)) {
+            surfaceData = (SurfaceData) createDataMethod.invoke(null, peer);
+            fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+        } else {
+            throw new RuntimeException("Unsupported peer type for Windows fast rendering");
+        }
+    }
+
+    private void initializeLinuxGraphics(Component canvas) throws Exception {
+        System.out.println("Init linux graphics");
+        Class<?> peerClass = Class.forName("sun.awt.X11ComponentPeer");
+        Class<?> surfaceDataClass = Class.forName("sun.java2d.xr.XRSurfaceData");
+        Method createDataMethod = surfaceDataClass.getMethod("createData", peerClass);
+
+        Object peer = canvas.getPeer();
+        if (peerClass.isInstance(peer)) {
+            surfaceData = (SurfaceData) createDataMethod.invoke(null, peer);
+            fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+        } else {
+            throw new RuntimeException("Unsupported peer type for Linux fast rendering");
+        }
+    }
+
+    private void initializeFallbackGraphics() {
+        System.out.println("Init fallback graphics, SLOW!");
+        BufferedImage fallbackImage = new BufferedImage(canvas.getWidth(), canvas.getHeight(), BufferedImage.TYPE_INT_RGB);
+        fastGraphics = (SunGraphics2D) fallbackImage.createGraphics();
+        surfaceData = null;
     }
 
     public void render() {
@@ -424,7 +463,6 @@ public class Renderer {
     public void setMap(Map map) {
         this.map = map;
     }
-
     public void setDimensions(int width, int height) {
         this.width = width;
         this.height = height;
@@ -440,20 +478,7 @@ public class Renderer {
         this.pixels = ((DataBufferInt) buffer.getRaster().getDataBuffer()).getData();
 
         // Update or recreate fastGraphics and surfaceData
-        try {
-            if (surfaceData != null) {
-                surfaceData.invalidate();
-            }
-            ComponentPeer peer = canvas.getPeer();
-            if (peer instanceof WComponentPeer) {
-                surfaceData = GDIWindowSurfaceData.createData((WComponentPeer) peer);
-                fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
-            } else {
-                throw new RuntimeException("Unsupported peer type for fast rendering");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update fast graphics: " + e.getMessage());
-        }
+        updateFastGraphics();
 
         // Update player's plane values if they depend on screen dimensions
         double planeLength = Math.tan(HALF_FOV);
@@ -462,6 +487,59 @@ public class Renderer {
 
         // Notify any listeners about the dimension change (if implemented)
         // notifyDimensionChangeListeners(width, height);
+    }
+
+    private void updateFastGraphics() {
+        try {
+            if (surfaceData != null) {
+                surfaceData.invalidate();
+            }
+
+            String os = System.getProperty("os.name").toLowerCase();
+            if (os.contains("windows")) {
+                updateWindowsGraphics();
+            } else if (os.contains("linux")) {
+                updateLinuxGraphics();
+            } else {
+                updateFallbackGraphics();
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to update fast graphics: " + e.getMessage());
+            updateFallbackGraphics();
+        }
+    }
+
+    private void updateWindowsGraphics() throws Exception {
+        Class<?> peerClass = Class.forName("sun.awt.windows.WComponentPeer");
+        Class<?> surfaceDataClass = Class.forName("sun.java2d.windows.GDIWindowSurfaceData");
+        Method createDataMethod = surfaceDataClass.getMethod("createData", peerClass);
+
+        Object peer = canvas.getPeer();
+        if (peerClass.isInstance(peer)) {
+            surfaceData = (SurfaceData) createDataMethod.invoke(null, peer);
+            fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+        } else {
+            throw new RuntimeException("Unsupported peer type for Windows fast rendering");
+        }
+    }
+
+    private void updateLinuxGraphics() throws Exception {
+        Class<?> peerClass = Class.forName("sun.awt.X11ComponentPeer");
+        Class<?> surfaceDataClass = Class.forName("sun.java2d.xr.XRSurfaceData");
+        Method createDataMethod = surfaceDataClass.getMethod("createData", peerClass);
+
+        Object peer = canvas.getPeer();
+        if (peerClass.isInstance(peer)) {
+            surfaceData = (SurfaceData) createDataMethod.invoke(null, peer);
+            fastGraphics = new SunGraphics2D(surfaceData, Color.BLACK, Color.BLACK, null);
+        } else {
+            throw new RuntimeException("Unsupported peer type for Linux fast rendering");
+        }
+    }
+
+    private void updateFallbackGraphics() {
+        surfaceData = null;
+        fastGraphics = (SunGraphics2D) buffer.createGraphics();
     }
 
     private void clearScreen() {
