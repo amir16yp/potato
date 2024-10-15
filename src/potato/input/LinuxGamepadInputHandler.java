@@ -1,6 +1,7 @@
 package potato.input;
 
 import potato.Game;
+import potato.Weapons;
 
 import java.awt.event.KeyEvent;
 import java.io.IOException;
@@ -105,6 +106,17 @@ public class LinuxGamepadInputHandler implements IInputHandler, AutoCloseable {
                 case "RB":
                     rotatingRight = pressed;
                     break;
+                case "X":
+                    if (pressed){
+                        if (Game.player.getWeapon() == Weapons.PISTOL)
+                        {
+                            Game.player.setWeapon(Weapons.SHOTGUN);
+                        } else {
+                            Game.player.setWeapon(Weapons.PISTOL);
+                        }
+                    }
+
+                    break;
                 case "Start":
                     Game.gameLoop.togglePause();
                     break;
@@ -116,14 +128,6 @@ public class LinuxGamepadInputHandler implements IInputHandler, AutoCloseable {
         @Override
         public void onAxisEvent(String axisName, float value) {
             switch (axisName) {
-                case "Left Stick Y":
-                    movingForward = value < -AXIS_THRESHOLD;
-                    movingBackward = value > AXIS_THRESHOLD;
-                    break;
-                case "Left Stick X":
-                    strafingLeft = value < -AXIS_THRESHOLD;
-                    strafingRight = value > AXIS_THRESHOLD;
-                    break;
                 case "DPAD X":
                     strafingLeft = value < -AXIS_THRESHOLD;
                     strafingRight = value > AXIS_THRESHOLD;
