@@ -90,6 +90,10 @@ public class Game extends JFrame {
 
     public void update() {
         player.update();
+        for (Projectile projectile : Game.renderer.projectiles)
+        {
+            projectile.update();
+        }
         for (SpriteEntity spriteEntity : Game.renderer.entities) {
             spriteEntity.update();
         }

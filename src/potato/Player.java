@@ -16,7 +16,6 @@ public class Player {
     private final double moveSpeed;
     private final double rotateSpeed;
     private Weapon weapon;
-    private final CopyOnWriteArrayList<Projectile> projectiles;
     private double health = 100.0;
 
     public Player(double x, double y, double angle) {
@@ -25,8 +24,7 @@ public class Player {
         this.angle = angle;
         this.moveSpeed = 3.0; // Units per second
         this.rotateSpeed = Math.PI; // Radians per second
-        this.projectiles = new CopyOnWriteArrayList<>();
-        // Initialize with a default weapon
+       // Initialize with a default weapon
         this.weapon = Weapons.SHOTGUN;
         this.planeX = Math.cos(angle + Math.PI / 2) * 0.66;
         this.planeY = Math.sin(angle + Math.PI / 2) * 0.66;
@@ -62,7 +60,6 @@ public class Player {
         handleMovement();
         handleRotation();
         handleWeapon();
-        updateProjectiles();
     }
 
     private void handleMovement() {
@@ -130,18 +127,7 @@ public class Player {
                 double projectileX = x + Math.cos(angle) * 0.5;
                 double projectileY = y + Math.sin(angle) * 0.5;
                 Projectile projectile = weapon.fire(projectileX, projectileY, angle, this.weapon.getProjectileTextureID());
-                projectiles.add(projectile);
-            }
-        }
-    }
-
-
-
-    private void updateProjectiles() {
-        for (Projectile projectile : projectiles) {
-            projectile.update();
-            if (!projectile.isActive()) {
-                projectiles.remove(projectile);
+                Game.renderer.projectiles.add(projectile);
             }
         }
     }
@@ -164,10 +150,6 @@ public class Player {
 
     public void setWeapon(Weapon weapon) {
         this.weapon = weapon;
-    }
-
-    public CopyOnWriteArrayList<Projectile> getProjectiles() {
-        return projectiles;
     }
 
     // Method to check if the player is moving (for weapon bobbing effect)

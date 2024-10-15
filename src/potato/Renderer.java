@@ -28,6 +28,8 @@ public class Renderer {
     private static final double WEAPON_BOB_SPEED = 4.0;
     private static final double WEAPON_BOB_AMOUNT = 10.0;
     private static int HALF_HEIGHT;
+
+    public final CopyOnWriteArrayList<Projectile> projectiles = new CopyOnWriteArrayList<>();
     public final CopyOnWriteArrayList<SpriteEntity> entities = new CopyOnWriteArrayList<>();
     private final Player player;
     public int width;
@@ -160,13 +162,13 @@ public class Renderer {
     }
 
     private void renderProjectile() {
-        Iterator<Projectile> iterator = this.player.getProjectiles().iterator();
+        Iterator<Projectile> iterator = projectiles.iterator();
         while (iterator.hasNext()) {
             Projectile projectile = iterator.next();
             if (projectile.isActive()) {
                 drawProjectile(projectile);
             } else {
-                iterator.remove();
+                projectiles.remove(projectile);
             }
         }
     }
