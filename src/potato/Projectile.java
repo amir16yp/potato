@@ -21,7 +21,7 @@ public class Projectile {
         this.damage = damage;
         this.sprite = Game.projectileTextures.getTile(textureID);
         this.active = true;
-        this.size = 0.1;
+        this.size = 0.75;
         logger.log("Created projectile at " + x + "," + y + " with angle " + angle);
     }
 

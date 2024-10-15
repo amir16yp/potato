@@ -5,7 +5,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 public class GlyphRenderer {
     private static final int GLYPH_WIDTH = 8;
     private static final int GLYPH_HEIGHT = 8;
