@@ -135,16 +135,6 @@ public class Player {
         }
     }
 
-    public Rectangle getHitbox() {
-        int scale = 32; // Assuming 1 game unit = 32 pixels
-        int hitboxSize = (int) (2 * COLLISION_RADIUS * scale);
-        return new Rectangle(
-                (int) (x * scale - hitboxSize / 2),
-                (int) (y * scale - hitboxSize / 2),
-                hitboxSize,
-                hitboxSize
-        );
-    }
 
 
     private void updateProjectiles() {

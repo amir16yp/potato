@@ -34,7 +34,13 @@ public class Renderer {
     public int gameHeight;
     private int height;
     private int hudHeight;
+
     private Map map;
+
+    private MiniMapRenderer miniMapRenderer;
+    private static final int MINIMAP_SIZE = 80; // Size of the minimap
+    private static final int MINIMAP_SCALE = 5; // Scale factor for the minimap
+
     private double[] zBuffer;
     private SunGraphics2D fastGraphics;
     private SurfaceData surfaceData;
@@ -117,8 +123,8 @@ public class Renderer {
     public void render() {
         clearScreen();
         if (map == null) {
-            map = new Map(32, 32, 123);
-            map.printMap();
+            map = new Map(128, 32, 123);
+            miniMapRenderer = new MiniMapRenderer(map, textures);
         }
         drawCeilingAndFloor();
         castRays();
@@ -173,12 +179,44 @@ public class Renderer {
 
         // Draw weapon icon and info
         drawWeaponIcon(g);
-
+        drawMinimap(g);
         // Draw FPS
         drawFPS(g);
-
         g.dispose();
     }
+
+    private void drawMinimap(Graphics2D g) {
+        BufferedImage miniMap = miniMapRenderer.renderMiniMap(MINIMAP_SCALE, player);
+
+        int mapWidth = map.getWidth() * MINIMAP_SCALE;
+        int mapHeight = map.getHeight() * MINIMAP_SCALE;
+
+        int miniMapX = width - MINIMAP_SIZE - 10;
+        int miniMapY = gameHeight + 10;
+
+        // Calculate the visible portion of the minimap
+        int playerMiniMapX = (int) (player.getX() * MINIMAP_SCALE);
+        int playerMiniMapY = (int) (player.getY() * MINIMAP_SCALE);
+
+        int startX = Math.max(0, playerMiniMapX - MINIMAP_SIZE / 2);
+        int startY = Math.max(0, playerMiniMapY - MINIMAP_SIZE / 2);
+        int endX = Math.min(mapWidth, startX + MINIMAP_SIZE);
+        int endY = Math.min(mapHeight, startY + MINIMAP_SIZE);
+
+        int visibleWidth = endX - startX;
+        int visibleHeight = endY - startY;
+
+        // Draw the visible portion of the minimap
+        g.drawImage(miniMap,
+                miniMapX, miniMapY, miniMapX + visibleWidth, miniMapY + visibleHeight,
+                startX, startY, endX, endY,
+                null);
+
+        // Draw border around the minimap
+        g.setColor(Color.WHITE);
+        g.drawRect(miniMapX, miniMapY, MINIMAP_SIZE, MINIMAP_SIZE);
+    }
+
 
     private void drawHealth(Graphics2D g) {
         BufferedImage fullHeart = Game.hudTextures.getTile(1);
@@ -221,7 +259,7 @@ public class Renderer {
     }
 
     private void drawFPS(Graphics2D g) {
-        FPS_TEXT.draw(g, width - FPS_TEXT.getWidth(), gameHeight + 40);
+        FPS_TEXT.draw(g, 0, 0);
     }
 
     private void drawCeilingAndFloor() {
