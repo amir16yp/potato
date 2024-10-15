@@ -17,7 +17,7 @@ public class Player {
     private final double rotateSpeed;
     private Weapon weapon;
     private final CopyOnWriteArrayList<Projectile> projectiles;
-    private final double health = 100.0;
+    private double health = 100.0;
 
     public Player(double x, double y, double angle) {
         this.x = x;
@@ -201,5 +201,15 @@ public class Player {
 
     public void setPlaneX(double planeX) {
         this.planeX = planeX;
+    }
+
+    public void takeDamage(double damage)
+    {
+        health = health -damage;
+        if (health <= 0)
+        {
+            health = 0;
+        }
+
     }
 }

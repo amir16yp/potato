@@ -3,7 +3,7 @@ package potato;
 import java.util.HashMap;
 import java.util.Map;
 
-public class EnemyEntity extends SpriteEntity {
+public abstract class EnemyEntity extends SpriteEntity {
     private static final Map<State, int[]> STATE_FRAMES = new HashMap<>();
 
     static {
@@ -86,21 +86,22 @@ public class EnemyEntity extends SpriteEntity {
         }
     }
 
+    public State getCurrentState() {
+        return currentState;
+    }
+
     private boolean isPlayerInRange() {
         Player player = Game.player;
         double distance = Math.sqrt(Math.pow(player.getX() - x, 2) + Math.pow(player.getY() - y, 2));
-        return distance < 2; // Attack range of 2 units
+        return distance < 5; // Attack range of 2 units
     }
-
-    private void attackPlayer() {
-        Player player = Game.player;
-        // Implement player damage logic here
-        // For example: player.takeDamage(attackDamage);
-    }
-
     @Override
     public void update() {
         super.update();
+        if (currentState == State.DEAD)
+        {
+            return;
+        }
         float deltaTime = Game.gameLoop.getDeltaTimeMillis();
         updateState();
         updateAttack(deltaTime);
@@ -114,6 +115,8 @@ public class EnemyEntity extends SpriteEntity {
     public int getMaxHealth() {
         return maxHealth;
     }
+
+    public abstract void attackPlayer();
 
     // Animation states
     public enum State {

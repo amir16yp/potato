@@ -79,7 +79,7 @@ public class DefaultInputHandler implements IInputHandler {
                 throw new RuntimeException(e);
             }
              */
-            Enemies.spawnEntity(coords[0], coords[1], Enemies.SHROOM_TEXTURES, 1.2);
+            Enemies.spawnShroomEnemy(coords[0], coords[1]);
         }
         if (key == KeyEvent.VK_1) {
             player.setWeapon(Weapons.PISTOL);

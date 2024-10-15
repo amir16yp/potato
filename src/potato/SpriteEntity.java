@@ -11,6 +11,8 @@ public class SpriteEntity {
     protected double speed;
     private double size;
     private Runnable onInteractPlayer;
+    private double velocityX;
+    private double velocityY;
 
     public SpriteEntity(double x, double y, BufferedImage sprite, double speed) {
         this.x = x;
@@ -20,6 +22,14 @@ public class SpriteEntity {
         this.speed = speed;
         this.active = true;
         this.size = 1;
+        this.velocityX = 0;
+        this.velocityY = 0;
+    }
+
+    public void setVelocity(double vx, double vy)
+    {
+        this.velocityX = vx;
+        this.velocityY =vy;
     }
 
     public void deactivate() {
@@ -68,6 +78,10 @@ public class SpriteEntity {
             Game.renderer.entities.remove(this);
             return;
         }
+        float deltaTime = Game.gameLoop.getDeltaTimeMillis() / 1000f;
+        x += velocityX * deltaTime;
+        y += velocityY * deltaTime;
+
         // Update angle to face the player
         updateToPlayer(Game.player);
     }
