@@ -1,6 +1,7 @@
 package potato;
 
 import potato.input.InputHandler;
+import potato.input.LinuxGamepadInputHandler;
 import potato.modsupport.Mod;
 import potato.modsupport.ModLoader;
 
@@ -47,6 +48,15 @@ public class Game extends JFrame {
 
         canvas.createBufferStrategy(2);
         //BufferStrategy bufferStrategy = canvas.getBufferStrategy();
+        try {
+            LinuxGamepadInputHandler linuxGamepadInputHandler = new LinuxGamepadInputHandler(0); // Assuming gamepad 0
+            inputHandler.setActiveHandler(linuxGamepadInputHandler);
+            System.out.println("Gamepad input initialized successfully.");
+        } catch (IOException e) {
+            System.err.println("Failed to initialize gamepad input: " + e.getMessage());
+            System.out.println("Falling back to default keyboard input.");
+            // The InputHandler will use the default keyboard input
+        }
 
         renderer = new Renderer(WIDTH, HEIGHT, canvas, player);
         addKeyListener(inputHandler);

@@ -65,6 +65,10 @@ public class InputHandler extends KeyAdapter {
         return activeHandler.isFiring();
     }
 
+    public Object getActiveHandler() {
+        return activeHandler;
+    }
+
     // Interface for InputHandler extensions
     public interface InputHandlerExtension {
         void onKeyPressed(int keyCode);

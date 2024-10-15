@@ -63,20 +63,14 @@ public class LinuxGamepad implements AutoCloseable {
 
     public void processEvents() throws IOException {
         GamepadEvent event = readEvent();
-        if (event != null) {
-            System.out.println(event); // Print raw event for debugging
-
+        if (event != null && eventHandler != null) {
             if (event.type == 1) {  // Button event
                 String buttonName = BUTTON_MAP.getOrDefault(event.number, "Unknown");
-                System.out.printf("Button %s %s%n", buttonName, event.value == 1 ? "pressed" : "released");
+                eventHandler.onButtonEvent(buttonName, event.value == 1);
             } else if (event.type == 2) {  // Axis event
-                String axisName = AXIS_MAP.getOrDefault( event.number, "Unknown");
+                String axisName = AXIS_MAP.getOrDefault(event.number, "Unknown");
                 float normalizedValue = event.value / 32767f;
-                System.out.printf("Axis %s: %.2f%n", axisName, normalizedValue);
-            } else if (event.type == -127 || event.type == -126) {
-                System.out.println("Initialization event");
-            } else {
-                System.out.printf("Unknown event: type=%d, number=%d, value=%d%n", event.type, event.number, event.value);
+                eventHandler.onAxisEvent(axisName, normalizedValue);
             }
         }
     }
@@ -95,6 +89,19 @@ public class LinuxGamepad implements AutoCloseable {
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
         }
+    }
+
+    private GamepadEventHandler eventHandler;
+
+    public void setEventHandler(GamepadEventHandler handler) {
+        this.eventHandler = handler;
+    }
+
+
+
+    public interface GamepadEventHandler {
+        void onButtonEvent(String buttonName, boolean pressed);
+        void onAxisEvent(String axisName, float value);
     }
 
     private static class GamepadEvent {
