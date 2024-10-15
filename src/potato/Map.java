@@ -5,18 +5,31 @@ import java.util.Random;
 
 public class Map {
     public static final int[] wallTextureIDs = {31};
-    protected final int width;
-    protected final int height;
-    protected final Random random;
-    protected final Logger logger;
-    private final int minRoomSize;
-    private final int maxRoomSize;
+    protected int width;
+    protected int height;
+    protected Random random;
+    protected Logger logger;
+    private int minRoomSize;
+    private int maxRoomSize;
     protected int[][] map;
     protected BufferedImage floorImage;
     protected BufferedImage ceilingImage;
 
     public Map(int width, int height, long seed) {
         this(width, height, seed, 5, 15);
+    }
+
+    public Map(int[][] data) {
+        this.map = data;
+        this.height = data.length;
+        this.width = data[0].length;
+        this.logger = new Logger(this.getClass().getName());
+        // Initialize other necessary fields
+        this.random = new Random();
+        this.minRoomSize = 5;
+        this.maxRoomSize = 15;
+        //this.ceilingImage = Game.textures.getTile(13);
+        //this.floorImage = Game.textures.getTile(17);
     }
 
     public Map(int width, int height, long seed, int minRoomSize, int maxRoomSize) {
@@ -27,7 +40,7 @@ public class Map {
         this.maxRoomSize = maxRoomSize;
         this.logger = new Logger(this.getClass().getName());
         //this.ceilingImage = Game.textures.getTile(13);
-        this.floorImage = Game.textures.getTile(17);
+        //this.floorImage = Game.textures.getTile(17);
         generateMap();
     }
 
@@ -175,5 +188,13 @@ public class Map {
         } else {
             logger.log("Attempt to set tile out of bounds: " + x + "," + y);
         }
+    }
+
+    public int[][] getMapData() {
+        return map;
+    }
+
+    public void setMapData(int[][] mapData) {
+        this.map = mapData;
     }
 }

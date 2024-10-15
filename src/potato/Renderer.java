@@ -1,6 +1,7 @@
 package potato;
 
 import potato.modsupport.Mod;
+import potato.server.*;
 import sun.java2d.SunGraphics2D;
 import sun.java2d.SurfaceData;
 
@@ -8,9 +9,15 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.peer.ComponentPeer;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Method;
+import java.net.Socket;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static potato.Game.textures;
@@ -50,6 +57,8 @@ public class Renderer {
     private int[] pixels;
     private final Component canvas;
 
+    private int clientId = -1; // Initialize with an invalid ID
+    private boolean mapReceived = false;
 
     public Renderer(int width, int height, Component canvas, Player player) {
         this.width = width;
@@ -64,8 +73,124 @@ public class Renderer {
 
         this.zBuffer = new double[width];
         new BufferedImage(width, hudHeight, BufferedImage.TYPE_INT_ARGB);
+        this.isMultiplayer = false;
         initializeFastGraphics(canvas);
+
     }
+
+    public void initializeMultiplayer(String serverIP, int serverPort) {
+        try {
+            socket = new Socket(serverIP, serverPort);
+            out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream());
+            isMultiplayer = true;
+
+            // Start a thread to receive packets from the server
+            new Thread(this::receivePackets).start();
+
+            System.out.println("Connected to server: " + serverIP + ":" + serverPort);
+
+            // Wait for the server to send the client ID
+            while (clientId == -1) {
+                Thread.sleep(100); // Wait a bit before checking again
+            }
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Failed to connect to server: " + e.getMessage());
+            isMultiplayer = false;
+        }
+    }
+
+    private void receivePackets() {
+        try {
+            while (isMultiplayer) {
+                Packet packet = (Packet) in.readObject();
+                if (packet instanceof ClientIDPacket) {
+                    clientId = ((ClientIDPacket) packet).getClientId();
+                    System.out.println("Received client ID: " + clientId);
+                } else {
+                    System.out.println(packet.getType());
+                    incomingPackets.offer(packet);
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error receiving packet: " + e.getMessage());
+            isMultiplayer = false;
+        }
+    }
+
+    public void sendPacket(Packet packet) {
+        if (!isMultiplayer) return;
+        try {
+            out.writeObject(packet);
+            out.flush();
+        } catch (IOException e) {
+            System.err.println("Error sending packet: " + e.getMessage());
+            isMultiplayer = false;
+        }
+    }
+
+    private void sendPlayerPosition() {
+        if (clientId != -1) {
+            PlayerPositionPacket posPacket = new PlayerPositionPacket(clientId, player.getX(), player.getY(), player.getAngle());
+            sendPacket(posPacket);
+        }
+    }
+
+    private void processServerUpdates() {
+        Packet packet;
+        while ((packet = incomingPackets.poll()) != null) {
+            if (packet.getType() == PacketType.MAP_DATA) {
+                updateMap((MapDataPacket) packet);
+            } else if (packet.getType() == PacketType.PLAYER_POSITION) {
+                PlayerPositionPacket posPacket = (PlayerPositionPacket) packet;
+                if (posPacket.getClientId() != clientId) {
+                    updateOtherPlayerPosition(posPacket);
+                }
+            }
+        }
+    }
+
+
+    private void updateOtherPlayerPosition(PlayerPositionPacket posPacket) {
+        int clientId = posPacket.getClientId();
+        SpriteEntity playerEntity = otherPlayers.computeIfAbsent(clientId, id -> new SpriteEntity(posPacket.getX(), posPacket.getY(), textures.getTile(1), 0)); // Use appropriate sprite
+        playerEntity.setX(posPacket.getX());
+        playerEntity.setY(posPacket.getY());
+    }
+
+    private void renderOtherPlayers() {
+        for (SpriteEntity playerEntity : otherPlayers.values()) {
+            playerEntity.render(this, player);
+        }
+    }
+
+
+    public void cleanup() {
+        if (isMultiplayer) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                System.err.println("Error closing socket: " + e.getMessage());
+            }
+        }
+    }
+
+
+    private void updateMap(MapDataPacket mapPacket) {
+        int[][] mapData = mapPacket.getMapData();
+        this.map = new Map(mapData);
+        this.map.printMap();
+        this.miniMapRenderer = new MiniMapRenderer(map, textures);
+        System.out.println("Map data received and initialized.");
+        this.mapReceived = true;
+    }
+
+    private Socket socket;
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
+    private boolean isMultiplayer;
+    private ConcurrentLinkedQueue<Packet> incomingPackets = new ConcurrentLinkedQueue<>();
+    private ConcurrentHashMap<Integer, SpriteEntity> otherPlayers = new ConcurrentHashMap<>();
 
 
 
@@ -123,14 +248,24 @@ public class Renderer {
     }
 
     public void render() {
+        if (!mapReceived && isMultiplayer) {
+            renderWaitingScreen();
+            return;
+        }
+
         clearScreen();
         if (map == null) {
-            map = new Map(128, 32, 123);
-            miniMapRenderer = new MiniMapRenderer(map, textures);
+            System.err.println("Map is null. This shouldn't happen after mapReceived is true.");
+            return;
         }
+
         drawCeilingAndFloor();
         castRays();
         renderEntities();
+        if (this.isMultiplayer)
+        {
+            renderOtherPlayers();
+        }
         renderWeapon();
         renderProjectile();
         renderHUD();
@@ -140,6 +275,18 @@ public class Renderer {
         }
         presentBuffer();
     }
+
+    private void renderWaitingScreen() {
+        Graphics2D g = buffer.createGraphics();
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, width, height);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Waiting for map data from server...", width/2 - 150, height/2);
+        g.dispose();
+        presentBuffer();
+    }
+
 
     private void drawProjectile(Projectile projectile) {
         double dx = projectile.getX() - player.getX();
@@ -585,6 +732,15 @@ public class Renderer {
     private void clearScreen() {
         Arrays.fill(pixels, 0);
     }
+
+
+    public void update() {
+        if (isMultiplayer) {
+            sendPlayerPosition();
+            processServerUpdates();
+        }
+    }
+
 
     private static class RaycastHit {
         final double distance;

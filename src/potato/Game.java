@@ -12,8 +12,8 @@ import java.io.IOException;
 
 public class Game extends JFrame {
     public static final ModLoader MOD_LOADER = new ModLoader();
-    public static int WIDTH = 640; // Now modifiable
-    public static int HEIGHT = 480; // Now modifiable
+    public static int WIDTH = 640;
+    public static int HEIGHT = 480;
     public static Renderer renderer;
     public static Player player;
     public static Textures textures;
@@ -22,6 +22,13 @@ public class Game extends JFrame {
     public static InputHandler inputHandler = new InputHandler();
     public static GameLoop gameLoop;
     public Canvas canvas;
+    private boolean isMultiplayer;
+
+    public Game(String serverIP, int serverPort) {
+        this();
+        isMultiplayer = true;
+        renderer.initializeMultiplayer(serverIP, serverPort);
+    }
 
     public Game() {
         setTitle("Potato");
@@ -34,8 +41,8 @@ public class Game extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
-        player = new Player(1.5, 1.5, 0); // Starting position and angle
-        textures = new Textures("/potato/sprites/textures.png", 16, 16); // Load textures
+        player = new Player(1.5, 1.5, 0);
+        textures = new Textures("/potato/sprites/textures.png", 16, 16);
         hudTextures = new Textures("/potato/sprites/hud.png", 32, 32);
         projectileTextures = new Textures("/potato/sprites/gun/boolet.png", 32, 32);
         canvas = new Canvas();
@@ -47,15 +54,13 @@ public class Game extends JFrame {
         setVisible(true);
 
         canvas.createBufferStrategy(2);
-        //BufferStrategy bufferStrategy = canvas.getBufferStrategy();
         try {
-            LinuxGamepadInputHandler linuxGamepadInputHandler = new LinuxGamepadInputHandler(0); // Assuming gamepad 0
+            LinuxGamepadInputHandler linuxGamepadInputHandler = new LinuxGamepadInputHandler(0);
             inputHandler.setActiveHandler(linuxGamepadInputHandler);
             System.out.println("Gamepad input initialized successfully.");
         } catch (IOException e) {
             System.err.println("Failed to initialize gamepad input: " + e.getMessage());
             System.out.println("Falling back to default keyboard input.");
-            // The InputHandler will use the default keyboard input
         }
 
         renderer = new Renderer(WIDTH, HEIGHT, canvas, player);
@@ -65,22 +70,27 @@ public class Game extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() ->
-        {
+        SwingUtilities.invokeLater(() -> {
+            Game game;
+            if (args.length == 2) {
+                String serverIP = args[0];
+                int serverPort = Integer.parseInt(args[1]);
+                game = new Game(serverIP, serverPort);
+            } else {
+                game = new Game();
+            }
+
             MOD_LOADER.loadMods();
             for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.preinit();
             }
-            Game game = new Game();
             for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.init();
             }
-            //game.setResolution(800, 600);
             game.start();
             for (Mod mod : MOD_LOADER.getLoadedMods()) {
                 mod.postinit();
             }
-            //game.setResolution(800, 600);
         });
     }
 
@@ -90,13 +100,18 @@ public class Game extends JFrame {
 
     public void update() {
         player.update();
-        for (Projectile projectile : Game.renderer.projectiles)
-        {
+        renderer.update(); // This now includes multiplayer updates if applicable
+        for (Projectile projectile : Game.renderer.projectiles) {
             projectile.update();
         }
         for (SpriteEntity spriteEntity : Game.renderer.entities) {
             spriteEntity.update();
         }
+        updateHUD();
+        MOD_LOADER.updateMods();
+    }
+
+    private void updateHUD() {
         if (player.getWeapon() == null) {
             Renderer.GUN_NAME_TEXT.setText("Unarmed");
             Renderer.GUN_AMMO_TEXT.setText("");
@@ -105,28 +120,26 @@ public class Game extends JFrame {
             Renderer.GUN_AMMO_TEXT.setText(String.valueOf(player.getWeapon().getAmmo()));
         }
         Renderer.FPS_TEXT.setText("FPS:" + gameLoop.getFPS());
-        MOD_LOADER.updateMods();
     }
 
     public void render() {
         renderer.render();
     }
 
-    // Method to set resolution
     public void setResolution(int width, int height) {
         WIDTH = width;
         HEIGHT = height;
-
-        // Update JFrame and Canvas size
         setSize(WIDTH, HEIGHT);
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
         canvas.setSize(WIDTH, HEIGHT);
-
-        // Update Renderer dimensions
         renderer.setDimensions(WIDTH, HEIGHT);
-
-        // Adjust the actual window size
         pack();
-        setLocationRelativeTo(null); // Center the window on screen
+        setLocationRelativeTo(null);
+    }
+
+    public void cleanup() {
+        if (isMultiplayer) {
+            renderer.cleanup();
+        }
     }
 }
