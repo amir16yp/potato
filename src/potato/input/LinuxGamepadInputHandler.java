@@ -118,7 +118,7 @@ public class LinuxGamepadInputHandler implements IInputHandler, AutoCloseable {
 
                     break;
                 case "Start":
-                    Game.gameLoop.togglePause();
+                    Game.setPaused(!Game.isPaused());
                     break;
 
                 // Add more button mappings as needed

@@ -5,8 +5,8 @@ import java.io.Serializable;
 public class ClientIDPacket implements Packet, Serializable {
     private final int clientId;
 
-    public ClientIDPacket(int clientId) {
-        this.clientId = clientId;
+    public ClientIDPacket(int uuid) {
+        this.clientId = uuid;
     }
 
     @Override

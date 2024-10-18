@@ -23,6 +23,16 @@ public class Game extends JFrame {
     public static GameLoop gameLoop;
     public Canvas canvas;
     private boolean isMultiplayer;
+    private static boolean paused = true;
+
+    public static void setPaused(boolean paused) {
+        Game.paused = paused;
+    }
+
+    public static boolean isPaused() {
+        return paused;
+    }
+
 
     public Game(String serverIP, int serverPort) {
         this();
@@ -98,9 +108,11 @@ public class Game extends JFrame {
         gameLoop.start();
     }
 
-    public void update() {
+    public void update()
+    {
+        renderer.updateMP(); // This now includes multiplayer updates if applicablewwwwwwww
+        if (isPaused()){return;}
         player.update();
-        renderer.update(); // This now includes multiplayer updates if applicable
         for (Projectile projectile : Game.renderer.projectiles) {
             projectile.update();
         }

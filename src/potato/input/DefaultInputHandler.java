@@ -1,6 +1,8 @@
 package potato.input;
 
 import potato.Enemies;
+import potato.Game;
+import potato.Renderer;
 import potato.Weapons;
 
 import java.awt.event.KeyEvent;
@@ -88,8 +90,19 @@ public class DefaultInputHandler implements IInputHandler {
             player.setWeapon(Weapons.SHOTGUN);
         }
 
-        if (key == KeyEvent.VK_ESCAPE) {
-            gameLoop.togglePause();
+        if (key == KeyEvent.VK_ESCAPE)
+        {
+            Game.setPaused(!Game.isPaused());
+        }
+
+        if (key == KeyEvent.VK_DOWN)
+        {
+            renderer.pauseMenu.moveSelectionDown();
+        }
+
+        if (key == KeyEvent.VK_UP)
+        {
+            renderer.pauseMenu.moveSelectionUp();
         }
     }
 }

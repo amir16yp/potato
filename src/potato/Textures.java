@@ -11,6 +11,8 @@ public class Textures {
     private final int tileWidth;
     private final int tileHeight;
     private final Logger logger;
+    private final String tilesetPath;
+    private BufferedImage tilesetImage;
 
     public Textures(String tilesetPath, int tileWidth, int tileHeight) {
         this.tileWidth = tileWidth;
@@ -18,39 +20,46 @@ public class Textures {
         this.tiles = new HashMap<>();
         this.logger = new Logger(this.getClass().getName());
         this.logger.addPrefix(tilesetPath);
-        loadTileset(tilesetPath);
+        this.tilesetPath = tilesetPath;
     }
 
-    private void loadTileset(String tilesetPath) {
-        try {
-            BufferedImage tilesetImage = ImageIO.read(getClass().getResourceAsStream(tilesetPath));
-            if (tilesetImage == null) {
-                throw new IOException("Failed to load tileset image");
-            }
-
-            int cols = tilesetImage.getWidth() / tileWidth;
-            int rows = tilesetImage.getHeight() / tileHeight;
-
-            for (int y = 0; y < rows; y++) {
-                for (int x = 0; x < cols; x++) {
-                    int id = y * cols + x + 1; // Start IDs from 1
-                    BufferedImage tile = tilesetImage.getSubimage(
-                            x * tileWidth, y * tileHeight, tileWidth, tileHeight);
-                    tiles.put(id, tile);
+    private void loadTilesetImage() {
+        if (tilesetImage == null) {
+            try {
+                tilesetImage = ImageIO.read(getClass().getResourceAsStream(tilesetPath));
+                if (tilesetImage == null) {
+                    throw new IOException("Failed to load tileset image");
                 }
+                logger.log("Loaded tileset image");
+            } catch (IOException e) {
+                logger.log("Error loading tileset: " + e.getMessage());
+                throw new RuntimeException("Failed to load tileset", e);
             }
-            logger.log("Loaded " + tiles.size() + " tiles");
-        } catch (IOException e) {
-            logger.log("Error loading tileset: " + e.getMessage());
-            throw new RuntimeException("Failed to load tileset", e);
         }
+    }
+
+    private BufferedImage loadTile(int id) {
+        loadTilesetImage();
+
+        int cols = tilesetImage.getWidth() / tileWidth;
+        int row = (id - 1) / cols;
+        int col = (id - 1) % cols;
+
+        return tilesetImage.getSubimage(
+                col * tileWidth, row * tileHeight, tileWidth, tileHeight);
     }
 
     public BufferedImage getTile(int id) {
         BufferedImage tile = tiles.get(id);
         if (tile == null) {
-            logger.log("Warning: Tile with ID " + id + " not found");
-            return createPlaceholderTile();
+            try {
+                tile = loadTile(id);
+                tiles.put(id, tile);
+                logger.log("Loaded tile with ID " + id);
+            } catch (Exception e) {
+                logger.log("Warning: Failed to load tile with ID " + id + ": " + e.getMessage());
+                tile = createPlaceholderTile();
+            }
         }
         return tile;
     }
@@ -76,6 +85,9 @@ public class Textures {
     }
 
     public int getTileCount() {
-        return tiles.size();
+        loadTilesetImage();
+        int cols = tilesetImage.getWidth() / tileWidth;
+        int rows = tilesetImage.getHeight() / tileHeight;
+        return cols * rows;
     }
 }

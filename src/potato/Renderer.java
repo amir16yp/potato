@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static potato.Game.textures;
+import static potato.Game.*;
 
 public class Renderer {
     public static final double FOV = Math.toRadians(60);
@@ -35,7 +35,6 @@ public class Renderer {
     private static final double WEAPON_BOB_SPEED = 4.0;
     private static final double WEAPON_BOB_AMOUNT = 10.0;
     private static int HALF_HEIGHT;
-
     public final CopyOnWriteArrayList<Projectile> projectiles = new CopyOnWriteArrayList<>();
     public final CopyOnWriteArrayList<SpriteEntity> entities = new CopyOnWriteArrayList<>();
     private final Player player;
@@ -43,8 +42,11 @@ public class Renderer {
     public int gameHeight;
     private int height;
     private int hudHeight;
+    private BufferedImage lastRenderedFrame;
 
     private Map map;
+
+    public PauseMenu pauseMenu = new PauseMenu(WIDTH, HEIGHT);
 
     private MiniMapRenderer miniMapRenderer;
     private static final int MINIMAP_SIZE = 80; // Size of the minimap
@@ -269,37 +271,46 @@ public class Renderer {
         surfaceData = null;
     }
 
-        public void render() {
-            if (!mapReceived && isMultiplayer) {
-                renderLoadingScreen("Retrieving map data from server...");
-                return;
-            }
-            if (!isMultiplayer)
-            {
-                map = new Map(32, 32, 123);
-                this.miniMapRenderer = new MiniMapRenderer(map, Game.textures);
-                this.mapReceived = true;
-            }
-
-            clearScreen();
-            drawCeilingAndFloor();
-            castRays();
-            renderEntities();
-            if (this.isMultiplayer)
-            {
-                renderOtherPlayers();
-            }
-            renderWeapon();
-            renderProjectile();
-            renderHUD();
-            for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
-                mod.drawGame(fastGraphics);
-                mod.drawHUD(fastGraphics);
-            }
-            presentBuffer();
+    public void render() {
+        if (Game.isPaused())
+        {
+            Graphics2D g = buffer.createGraphics();
+            pauseMenu.draw(g, lastRenderedFrame);
+            g.dispose();
+            presentBuffer(buffer);
+            return;
+        }
+        if (!mapReceived && isMultiplayer) {
+            renderLoadingScreen("Retrieving map data from server...");
+            return;
+        }
+        if (!isMultiplayer)
+        {
+            map = new Map(32, 32, 123);
+            this.miniMapRenderer = new MiniMapRenderer(map, Game.textures);
+            this.mapReceived = true;
         }
 
-    private void renderLoadingScreen(String text) 
+        clearScreen();
+        drawCeilingAndFloor();
+        castRays();
+        renderEntities();
+        if (this.isMultiplayer)
+        {
+            renderOtherPlayers();
+        }
+        renderWeapon();
+        renderProjectile();
+        renderHUD();
+        for (Mod mod : Game.MOD_LOADER.getLoadedMods()) {
+            mod.drawGame(fastGraphics);
+            mod.drawHUD(fastGraphics);
+        }
+        lastRenderedFrame = buffer;
+        presentBuffer(buffer);
+    }
+
+    private void renderLoadingScreen(String text)
     {
         Graphics2D g = buffer.createGraphics();
         g.setColor(Color.BLACK);
@@ -328,7 +339,7 @@ public class Renderer {
         g.fillRect(barX, barY, progress, barHeight);
 
         g.dispose();
-        presentBuffer();
+        presentBuffer(buffer);
     }
 
 
@@ -364,7 +375,7 @@ public class Renderer {
         }
     }
 
-    private void renderHUD() 
+    private void renderHUD()
     {
         if (!mapReceived) {return;}
         Graphics2D g = buffer.createGraphics();
@@ -669,8 +680,8 @@ public class Renderer {
         }
     }
 
-    private void presentBuffer() {
-        fastGraphics.drawImage(buffer, 0, 0, null);
+    private void presentBuffer(BufferedImage bufferedImage) {
+        fastGraphics.drawImage(bufferedImage, 0, 0, null);
     }
 
     private void renderWeapon() {
@@ -719,7 +730,7 @@ public class Renderer {
         double planeLength = Math.tan(HALF_FOV);
         player.setPlaneX(-planeLength * Math.sin(player.getAngle()));
         player.setPlaneY(planeLength * Math.cos(player.getAngle()));
-
+        pauseMenu = new PauseMenu(width, height);
         // Notify any listeners about the dimension change (if implemented)
         // notifyDimensionChangeListeners(width, height);
     }
@@ -782,7 +793,7 @@ public class Renderer {
     }
 
 
-    public void update() {
+    public void updateMP() {
         if (isMultiplayer) {
             sendPlayerPosition();
             processServerUpdates();
